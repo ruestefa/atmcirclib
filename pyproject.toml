@@ -1,7 +1,6 @@
 [build-system]
 requires = ["setuptools >= 35.0.2", "wheel"]
 build-backend = "setuptools.build_meta"
-version = "0.0.1"
 
 [tool.isort]
 default_section = "THIRDPARTY"
