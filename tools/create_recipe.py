@@ -79,6 +79,11 @@ class Metadata:
     long_description: str = ""
     classifiers: list[str] = dc.field(default_factory=list)
 
+    def __post_init__(self) -> None:
+        """Finish initialization."""
+        if self.url.startswith("https://"):
+            self.url = self.url.replace("https://", "git+ssh://git@")
+
 
 class TestMetadata(Metadata):
     """Package metadata with hardcoded values for testing."""
@@ -91,7 +96,7 @@ class TestMetadata(Metadata):
             author="Foobert Barson",
             author_email="foo.bar@baz.com",
             description="Test tool",
-            url="https://git@github.com/foobar/baz.git",
+            url="git@ssh://git@github.com/foobar/baz.git",
             keywords="foo bar baz",
         )
 
@@ -116,7 +121,7 @@ class MetaYamlFile:
         {ind}version: {{{{ version }}}}
 
         source:
-        {ind}git_rev: {{{{ version }}}}
+        {ind}git_rev: v{{{{ version }}}}
         {ind}git_url: {url}
 
         build:
