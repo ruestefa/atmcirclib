@@ -1,4 +1,5 @@
 black
+conda-build
 flake8
 ipdb
 ipython
