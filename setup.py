@@ -74,6 +74,7 @@ classifiers: list[str] = [
     "Programming Language :: Python :: 3",
     "Programming Language :: Python :: 3.9",
 ]
+metadata["classifiers"] = classifiers
 
 python: str = ">= 3.9"
 
@@ -96,5 +97,4 @@ setup(
     include_package_data=True,
     zip_save=False,
     **metadata,
-    classifiers=classifiers,
 )
