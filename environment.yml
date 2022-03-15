@@ -6,6 +6,7 @@ dependencies:
   - _libgcc_mutex=0.1
   - _openmp_mutex=4.5
   - ca-certificates=2021.10.8
+  - click=8.0.4
   - importlib-metadata=4.11.3
   - importlib_metadata=4.11.3
   - ld_impl_linux-64=2.36.1
