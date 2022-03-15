@@ -1,0 +1,35 @@
+{% set name = "atmcirclib" %}
+{% set version = "0.0.1" %}
+{% set build = "0" %}
+
+package:
+  name: {{ name | lower }}
+  version: {{ version }}
+
+source:
+  git_rev: v{{ version }}
+  git_url: git+ssh://git@git.iac.ethz.ch/atmcirc/tools/atmcirclib.git
+
+build:
+  noarch: python
+  number: {{ build }}
+  script: python -m pip install --no-deps --ignore-installed .
+
+requirements:
+  host:
+    - python
+    - pip
+  run:
+    - click
+    - numpy>=1.20.0
+    - xarray
+
+test:
+  imports:
+    - {{ name }}
+
+about:
+  license: MIT
+  summary: Python library of Atmospheric Circulation group
+  description: |
+    # Atmcirclib: Python tools to analyze the atmospheric circulation
