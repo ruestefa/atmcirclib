@@ -1,0 +1,46 @@
+name: /home/stefan/conda-envs/atmcirclib
+channels:
+  - conda-forge
+  - defaults
+dependencies:
+  - _libgcc_mutex=0.1
+  - _openmp_mutex=4.5
+  - ca-certificates=2021.10.8
+  - importlib-metadata=4.11.3
+  - importlib_metadata=4.11.3
+  - ld_impl_linux-64=2.36.1
+  - libblas=3.9.0
+  - libcblas=3.9.0
+  - libffi=3.3
+  - libgcc-ng=11.2.0
+  - libgfortran-ng=11.2.0
+  - libgfortran5=11.2.0
+  - libgomp=11.2.0
+  - liblapack=3.9.0
+  - libopenblas=0.3.18
+  - libstdcxx-ng=11.2.0
+  - libzlib=1.2.11
+  - ncurses=6.3
+  - numpy=1.22.3
+  - openssl=1.1.1l
+  - packaging=21.3
+  - pandas=1.4.1
+  - pip=22.0.4
+  - pyparsing=3.0.7
+  - python=3.9.0
+  - python-dateutil=2.8.2
+  - python_abi=3.9
+  - pytz=2021.3
+  - readline=8.1
+  - setuptools=60.9.3
+  - six=1.16.0
+  - sqlite=3.37.0
+  - tk=8.6.12
+  - typing_extensions=4.1.1
+  - tzdata=2021e
+  - wheel=0.37.1
+  - xarray=2022.3.0
+  - xz=5.2.5
+  - zipp=3.7.0
+  - zlib=1.2.11
+prefix: /home/stefan/conda-envs/atmcirclib
