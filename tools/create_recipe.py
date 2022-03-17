@@ -8,23 +8,23 @@ from __future__ import annotations
 
 # Standard library
 import dataclasses as dc
-import importlib
 import os
 import pprint as pp
 import sys
-import tempfile
 import typing
+from pathlib import Path
 from textwrap import dedent
 from types import ModuleType
 from typing import Any
 from typing import Optional
 from typing import Union
 
-if typing.TYPE_CHECKING:
-    from os import PathLike  # noqa
-
 # Third-party
 import click
+
+if typing.TYPE_CHECKING:
+    # Standard library
+    from os import PathLike  # noqa
 
 # Types
 PathLike_T = Union[str, bytes, os.PathLike]
@@ -57,11 +57,25 @@ class SetupPyFile:
                 if line.startswith("setup("):
                     break
                 lines.append(line)
-        with tempfile.NamedTemporaryFile("a") as f:
-            # Import abbreviated setup.py
+
+        # pylint: disable=C0415  # import-outside-toplevel
+        # pylint: disable=E0401  # import-error
+        def import__partial_setup_(path: str) -> ModuleType:
+            """Import module '_partial_setup_' at ``path``."""
+            sys.path.append(path)
+            import _partial_setup_ as mod  # type: ignore  # isort: skip
+
+            sys.path.pop()
+            return mod
+
+        partial_setup = Path("_partial_setup_.py")
+        if Path(partial_setup).exists():
+            raise Exception(f"file '{partial_setup}' already exists; please remove it")
+        with open(partial_setup, "w") as f:
             f.writelines(lines)
-            f.seek(0)  # reset pointer to beginning
-            return importlib.machinery.SourceFileLoader("setup", f.name).load_module()
+        mod = import__partial_setup_(".")
+        Path(partial_setup).unlink()
+        return mod
 
 
 @dc.dataclass
@@ -220,4 +234,5 @@ def test() -> None:
 
 
 if __name__ == "__main__":
+    # pylint: disable=E1120  # no-value-for-parameter (ctx)
     sys.exit(cli())

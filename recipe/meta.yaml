@@ -20,9 +20,10 @@ requirements:
     - python
     - pip
   run:
-    - click
+    - cartopy>=0.20.0
+    - click>=8.0.0
     - numpy>=1.20.0
-    - xarray
+    - xarray>=2022.1.0
 
 test:
   imports:

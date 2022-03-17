@@ -21,6 +21,7 @@ from atmcirclib.geo import BoundingBox
 from atmcirclib.typing import PathLike_T
 
 
+# pylint: disable=R0904  # too-many-public-methods (>20)
 class TrajsDataset:
     """A trajectories dataset as written by COSMO online trajs module."""
 
@@ -163,6 +164,7 @@ class TrajsDataset:
     def get_domain_proj(self) -> ccrs.Projection:
         """Get projection of simulation data."""
         with self.open_const_file() as ds:
+            # pylint: disable=E0110  # abstract-class-instantiated (RotatedPole)
             return ccrs.RotatedPole(
                 pole_latitude=ds.rotated_pole.grid_north_pole_latitude,
                 pole_longitude=ds.rotated_pole.grid_north_pole_longitude,

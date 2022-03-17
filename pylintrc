@@ -1,43 +1,21 @@
 [pylint]
-# Note: Copied from pyflexplot (v1.0.7)
 ignore-imports = yes
 max-line-length = 88
-# Tweak valid name formats
-# Defaults (http://pylint-messages.wikidot.com/messages:c0103):
-#  argument-rgx  = ^[a-z_][a-z0-9_]{2,30}$
-#  attr-rgx      = ^[a-z_][a-z0-9_]{2,30}$
-#  function-rgx  = ^[a-z_][a-z0-9_]{2,30}$
-#  method-rgx    = ^[a-z_][a-z0-9_]{2,30}$
-#  variable-rgx  = ^[a-z_][a-z0-9_]{2,30}$
-#  class-rgx     = ^[A-Z_][a-zA-Z0-9]+$
-#  const-rgx     = ^(([A-Z_][A-Z0-9_]*)|(__.*__))$
-#  module-rgx    = ^(([a-z_][a-z0-9_]*)|([A-Z][a-zA-Z0-9]+))$
-argument-rgx  = ^[a-z_][a-z0-9_]{,40}$
-attr-rgx      = ^[a-z_][a-z0-9_]{,40}$
-function-rgx  = ^[a-z_][a-z0-9_]{,40}$
-method-rgx    = ^[a-z_][a-z0-9_]{,40}$
-variable-rgx  = ^[a-z_][a-z0-9_]{,40}$
-class-rgx     = ^[A-Z_][a-zA-Z0-9]+$
-const-rgx     = ^(([a-z_][a-z0-9_]*)|([A-Z_][A-Z0-9_]*)|(__[a-zA-Z0-9]+__))$
-module-rgx    = ^(([a-z_][a-z0-9_]*)|([A-Z][a-zA-Z0-9]+))$
-inlinevar-rgx = ^[A-Za-z_][A-Za-z0-9_]*$
 # Disable selected warnings, errors etc. that conflict with style guide etc.
-# Note: To locally ignore certain errors, use "pylint: disable=XXXX" comments instead!
+# Note: To ignore an error etc. inline, add directive "# pylint: disable=XXXX"
 disable =
-    C0115, # Missing class docstring
-    C0116, # Missing function or method docstring
-    C0330, # Wrong hanging indentation before block (add 4 spaces)
-    R0903, # Too few public methods (*/2) (too-few-public-methods)
-    R0801, # Similar lines in 2 files (duplicate-code)
+    C0103, # invalid-name
+    C0115, # ???: Missing class docstring
+    C0116, # ???: Missing function or method docstring
+    C0330, # ???: Wrong hanging indentation before block (add 4 spaces)
+    R0903, # too-few-public-methods (<2)
+    # R0801, # duplicate-code: Similar lines in 2 files
     # -> see https://github.com/PyCQA/pylint/issues/214
-    R1705, # Unnecessary "elif" after "return" (no-else-return)
-    R1720, # Unnecessary "elif" after "raise" (no-else-raise)
-    R1724, # Unnecessary "elif" after "continue" (no-else-continue)
-    W1116, # Second argument of isinstance is not a type (isinstance-second-argument-not-valid-type)
-    W0602, # Using global for '...' but no assignment is done (global-variable-not-assigned)
-    E0401, # Inable to import '...' (import-error)
-    # -> Wrongly triggered for relative imports (pylint v2.11.1, 2022-03-09)
-    # -> TODO Re-enable once fixed (see https://github.com/PyCQA/pylint/issues/3651)
+    R1705, # no-else-return: Unnecessary "elif" after "return"
+    R1720, # no-else-raise: Unnecessary "elif" after "raise"
+    R1724, # no-else-continue: Unnecessary "elif" after "continue"
+    W1116, # isinstance-second-argument-not-valid-type
+    W0602, # global-variable-not-assigned
 # Ignore (sub-)modules that trigger errors like E1101 (no-member) or E0611 (no-name-in-module)
 ignored-modules =
     cartopy,  # E1101 (no-member) (PlateCarree)
