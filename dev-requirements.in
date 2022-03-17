@@ -6,10 +6,10 @@ ipdb
 ipython
 isort
 mccabe
-mypy
+mypy>=0.941
 pre-commit
 pylint
 pytest
-tox
+tox>=3.0.0
 tox-conda
 types-setuptools
