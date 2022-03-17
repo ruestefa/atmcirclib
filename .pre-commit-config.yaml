@@ -35,8 +35,6 @@ repos:
         args: []
         additional_dependencies:
           - numpy>=1.21.4
-          - pint>=0.18
-          - future-annotations
           - types-setuptools
           - xarray
 -   repo: local
