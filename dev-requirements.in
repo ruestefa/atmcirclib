@@ -5,8 +5,10 @@ flake8
 ipdb
 ipython
 isort
+mccabe
 mypy
 pre-commit
+pylint
 pytest
 tox
 tox-conda
