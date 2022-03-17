@@ -6,9 +6,8 @@ import dataclasses as dc
 import datetime as dt
 from collections.abc import Sequence
 from typing import Any
-from typing import Literal
+from typing import cast
 from typing import Optional
-from typing import overload
 from typing import Union
 
 # Third-party
@@ -56,7 +55,7 @@ class TrajsDataset:
     class MissingConfigError(Exception):
         """Missing an entry in ``Config``."""
 
-    def __init__(self, ds: xr.Dataset, **config_kwargs) -> None:
+    def __init__(self, ds: xr.Dataset, **config_kwargs: Any) -> None:
         """Create a new instance."""
         self.config: TrajsDataset.Config = self.Config(**config_kwargs)
         self.ds: xr.Dataset = ds
@@ -68,11 +67,13 @@ class TrajsDataset:
         idx_traj: Union[int, slice] = slice(None),
     ) -> npt.NDArray[np.float_]:
         """Get data (sub-) array of variable with NaNs as missing values."""
-        arr = np.array(self.ds.variables[name].data[idx_time, idx_traj], np.float32)
+        arr: npt.NDArray[np.float32] = np.array(
+            self.ds.variables[name].data[idx_time, idx_traj], np.float32
+        )
         arr[arr == self.config.nan] = np.nan
         return arr
 
-    def only(self, **criteria) -> TrajsDataset:
+    def only(self, **criteria: Any) -> TrajsDataset:
         """Return a copy with only those trajs that fulfill the given criteria.
 
         See docstring of ``get_traj_mask`` for details on the criteria.
@@ -81,7 +82,7 @@ class TrajsDataset:
         mask = self.get_traj_mask(**criteria)
         return self._without_masked(~mask)
 
-    def without(self, **criteria) -> TrajsDataset:
+    def without(self, **criteria: Any) -> TrajsDataset:
         """Return a copy without those trajs that fulfill the given criteria.
 
         See docstring of ``get_traj_mask`` for details on the criteria.
@@ -90,21 +91,22 @@ class TrajsDataset:
         mask = self.get_traj_mask(**criteria)
         return self._without_masked(mask)
 
-    def count(self, **criteria) -> int:
+    def count(self, **criteria: Any) -> int:
         """Count all trajs that fulfill the given criteria.
 
         See docstring of ``get_traj_mask`` for details on the criteria.
 
         """
-        return self.get_traj_mask(**criteria).sum()
+        # mypy thinks return type is Any (mypy v0.941, numpy v1.22.3)
+        return cast(int, self.get_traj_mask(**criteria).sum())
 
     def get_traj_mask(
         self,
         *,
         incomplete: Optional[bool] = None,
         boundary: Optional[bool] = None,
-        uv: tuple[int, float, float] = None,
-        z: tuple[int, float, float] = None,
+        uv: Optional[tuple[int, float, float]] = None,
+        z: Optional[tuple[int, float, float]] = None,
         require_all: bool = True,
     ) -> npt.NDArray[np.bool_]:
         """Get a mask indicating which trajs fulfill a combination of criteria.
@@ -155,7 +157,8 @@ class TrajsDataset:
         """Open file ``Config.const_file``."""
         if self.config.const_file is None:
             raise self.MissingConfigError("const_file")
-        return xr.open_dataset(self.config.const_file)
+        # mypy thinks return type is Any (mypy v0.941, numpy v1.22.3)
+        return cast(xr.Dataset, xr.open_dataset(self.config.const_file))
 
     def get_domain_proj(self) -> ccrs.Projection:
         """Get projection of simulation data."""
@@ -256,22 +259,25 @@ class TrajsDataset:
 
         """
 
-        def pts_to_bins(pts: npt.NDArray[np.float_]) -> npt.NDArray[np.float_]:
+        def centers_to_edges(centers: npt.NDArray[np.float_]) -> npt.NDArray[np.float_]:
             """Obtain bin boundaries between points."""
-            inner = np.mean([pts[:-1], pts[1:]], axis=0)
+            inner_edges = np.mean([centers[:-1], centers[1:]], axis=0)
             if not extrapolate:
-                return inner
-            return np.r_[
-                pts[0] - (inner[0] - pts[0]),
-                inner,
-                pts[-1] + (pts[-1] - inner[-1]),
-            ]
+                edges = inner_edges
+            else:
+                edges = np.r_[
+                    centers[0] - (inner_edges[0] - centers[0]),
+                    inner_edges,
+                    centers[-1] + (centers[-1] - inner_edges[-1]),
+                ]
+            # mypy thinks return type is Any (mypy v0.941, numpy v1.22.3)
+            return cast(npt.NDArray[np.float_], edges)
 
         points = self.get_start_points(try_file=try_file)
         return (
-            pts_to_bins(np.sort(np.unique(points["lon"]))),
-            pts_to_bins(np.sort(np.unique(points["lat"]))),
-            pts_to_bins(np.sort(np.unique(points["z"]))),
+            centers_to_edges(np.sort(np.unique(points["lon"]))),
+            centers_to_edges(np.sort(np.unique(points["lat"]))),
+            centers_to_edges(np.sort(np.unique(points["z"]))),
         )
 
     def get_dt_ref(self) -> dt.datetime:
@@ -285,52 +291,34 @@ class TrajsDataset:
             self.ds.attrs["ref_sec"],
         )
 
-    @overload
     def get_abs_time(
-        self,
-        idcs: Union[Sequence[int], slice] = ...,
-        *,
-        format: Literal[False] = False,
+        self, idcs: Union[Sequence[int], slice] = slice(None)
     ) -> list[dt.datetime]:
-        ...
-
-    @overload
-    def get_abs_time(
-        self,
-        idcs: Union[Sequence[int], slice] = ...,
-        *,
-        format: Literal[True],
-    ) -> list[str]:
-        ...
-
-    def get_abs_time(self, idcs=slice(None), *, format=False):
         """Get the time dimension as absolute datimes.
 
         Args:
             idcs (optional): Indices or slice to return only a subset of steps.
 
-            format (optional): Return formatted strings.
-
         """
         rel_time = self.ds.time.data[idcs].astype("timedelta64[s]").astype(dt.timedelta)
         abs_time = (self.get_dt_ref() + rel_time).tolist()
-        if not format:
-            return abs_time
-        # return list(map(dt.datetime.strftime("%Y-%m-%d_%H:%M:%S"), abs_time))
+        # mypy thinks return type is Any (mypy v0.941, numpy v1.22.3)
+        return cast(list[dt.datetime], abs_time)
+
+    def format_abs_time(
+        self,
+        idcs: Union[Sequence[int], slice] = slice(None),
+    ) -> list[str]:
+        """Format the time dimension as absolute datimes."""
+        abs_time = self.get_abs_time(idcs)
         return [dt_.strftime("%Y-%m-%d %H:%M:%S") for dt_ in abs_time]
 
-    @overload
-    def get_duration(self, *, format: Literal[False] = False) -> dt.timedelta:
-        ...
-
-    @overload
-    def get_duration(self, *, format: Literal[True]) -> str:
-        ...
-
-    def get_duration(self, *, format=False):
+    def get_duration(self) -> dt.timedelta:
         """Get the duration of the dataset."""
-        if format is False:
-            return self.get_end() - self.get_start()
+        return self.get_end() - self.get_start()
+
+    def format_duration(self) -> str:
+        """Format the duration of the dataset."""
         return self.format_rel_time(self.get_end())
 
     def format_rel_time(
@@ -349,15 +337,7 @@ class TrajsDataset:
         assert secs + 60 * mins + 3600 * hours == tot_secs
         return f"{hours:02}:{mins:02}:{secs:02}"
 
-    @overload
-    def get_start(self, *, format: Literal[False] = False) -> dt.datetime:
-        ...
-
-    @overload
-    def get_start(self, *, format: Literal[True]) -> str:
-        ...
-
-    def get_start(self, *, format=False):
+    def get_start(self) -> dt.datetime:
         """Get the first time step in the file, optionally as a string."""
         # Note (2022-02-04):
         # Don't use the first time step because it corresponds to the last
@@ -368,19 +348,20 @@ class TrajsDataset:
         #   [2016-09-24_23:59:50, 2016-09-25_00:00:00, 2016-09-25_00:01:00, ...]
         # What we want instead is the second step.
         # Eventually, this should be implemented in COSMO more consistently!
-        return self.get_abs_time(idcs=[1], format=format)[0]
+        return self.get_abs_time(idcs=[1])[0]
 
-    @overload
-    def get_end(self, *, format: Literal[False] = False) -> dt.datetime:
-        ...
+    def format_start(self) -> str:
+        """Format the first time step in the file, optionally as a string."""
+        # See comment in method get_start
+        return self.format_abs_time(idcs=[1])[0]
 
-    @overload
-    def get_end(self, *, format: Literal[True]) -> str:
-        ...
-
-    def get_end(self, *, format=False):
+    def get_end(self) -> dt.datetime:
         """Get the last time step in the file, optionally as a string."""
-        return self.get_abs_time(idcs=[-1], format=format)[0]
+        return self.get_abs_time(idcs=[-1])[0]
+
+    def format_end(self) -> str:
+        """Format the last time step in the file, optionally as a string."""
+        return self.format_abs_time(idcs=[-1])[0]
 
     def _without_masked(self, mask: npt.NDArray[np.bool_]) -> TrajsDataset:
         """Return a copy without those trajs indicated in the mask."""
@@ -406,7 +387,9 @@ class TrajsDataset:
 
     def _get_traj_mask_any_incomplete(self) -> npt.NDArray[np.bool_]:
         """Get 1D mask indicating all trajs with any ``Config.nan`` values."""
-        return (self.ds.z.data == self.config.nan).sum(axis=0) > 0
+        mask = (self.ds.z.data == self.config.nan).sum(axis=0) > 0
+        # mypy thinks return type is Any (mypy v0.941, numpy v1.22.3)
+        return cast(npt.NDArray[np.bool_], mask)
 
     def _get_traj_mask_any_boundary(self) -> npt.NDArray[np.bool_]:
         """Get 1D mask indicating all trajs ever reaching the boundary zone."""
@@ -415,7 +398,9 @@ class TrajsDataset:
         nan_mask = self._get_traj_mask_any_incomplete()
         rlon_mask = np.where(nan_mask, True, (rlon < llrlon) | (rlon > urrlon))
         rlat_mask = np.where(nan_mask, True, (rlat < llrlat) | (rlat > urrlat))
-        return (rlon_mask | rlat_mask).sum(axis=0) > 0
+        mask = (rlon_mask | rlat_mask).sum(axis=0) > 0
+        # mypy thinks return type is Any (mypy v0.941, numpy v1.22.3)
+        return cast(npt.NDArray[np.bool_], mask)
 
     def _get_traj_mask_z(
         self, idx_time: int, vmin: Optional[float], vmax: Optional[float]
@@ -451,7 +436,7 @@ class TrajsDataset:
         return mask
 
     @classmethod
-    def from_file(cls, path: PathLike_T, **config_kwargs) -> TrajsDataset:
+    def from_file(cls, path: PathLike_T, **config_kwargs: Any) -> TrajsDataset:
         """Read trajs dataset from file."""
         try:
             # ds = xr.open_dataset(path, engine="netcdf4")

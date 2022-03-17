@@ -184,7 +184,7 @@ class MetaYamlFile:
     help="Outfile file path; pass - to write to standard output.",
     default="recipe/meta.yaml",
 )
-def cli(ctx: click.Context, **kwargs) -> None:
+def cli(ctx: click.Context, **kwargs: Any) -> None:
     """Command line interface."""
     if ctx.invoked_subcommand is None:
         main(**kwargs)
