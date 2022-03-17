@@ -1,0 +1,14 @@
+include README.md
+include CHANGELOG.md
+include LICENSE
+
+include *requirements.in
+include *environment.yml
+
+recursive-include src/*/data *
+recursive-include src py.typed
+
+recursive-include tests *
+
+recursive-exclude * __pycache__
+recursive-exclude * *.py[co]
