@@ -7,4 +7,7 @@ ipython
 isort
 mypy
 pre-commit
+pytest
+tox
+tox-conda
 types-setuptools
