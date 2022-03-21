@@ -16,6 +16,7 @@ from pathlib import Path
 from textwrap import dedent
 from types import ModuleType
 from typing import Any
+from typing import cast
 from typing import Optional
 from typing import Union
 
@@ -66,7 +67,8 @@ class SetupPyFile:
             import _partial_setup_ as mod  # type: ignore  # isort: skip
 
             sys.path.pop()
-            return mod
+            # mypy v0.941 thinks mod is of type Any, not ModuleType
+            return cast(ModuleType, mod)
 
         partial_setup = Path("_partial_setup_.py")
         if Path(partial_setup).exists():
