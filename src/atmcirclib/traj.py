@@ -21,7 +21,6 @@ from atmcirclib.geo import BoundingBox
 from atmcirclib.typing import PathLike_T
 
 
-# pylint: disable=R0904  # too-many-public-methods (>20)
 class TrajsDataset:
     """A trajectories dataset as written by COSMO online trajs module."""
 
@@ -31,6 +30,37 @@ class TrajsDataset:
 
         Properties:
             nan: Missig value in data.
+
+            verbose: Increase verbosity; TODO: replace by proper logging.
+
+        """
+
+        nan: float = -999.0
+        verbose: bool = True
+
+    class MissingConfigError(Exception):
+        """Missing an entry in ``Config``."""
+
+    def __init__(self, ds: xr.Dataset, **config_kwargs: Any) -> None:
+        """Create a new instance."""
+        self.config: TrajsDataset.Config = self.Config(**config_kwargs)
+        self.ds: xr.Dataset = ds
+
+
+# pylint: disable=R0904  # too-many-public-methods (>20)
+class ExtendedTrajsDataset(TrajsDataset):
+    """A temporary extension of ``TrajsDataset`` with additional methods.
+
+    These methods are untested and might be moved to other classes eventually.
+    Only the interface of ``TrajsDataset`` can be considered stable!
+
+    """
+
+    @dc.dataclass
+    class Config(TrajsDataset.Config):
+        """Configuration.
+
+        Properties:
 
             boundary_size_km: Size of the domain boundary zone in kilometers.
 
@@ -42,24 +72,17 @@ class TrajsDataset:
 
             start_file_header: Number of header lines in start file.
 
-            verbose: Increase verbosity; TODO: replace by proper logging.
-
         """
 
-        nan: float = -999.0
         boundary_size_km: float = 100.0
         const_file: Optional[PathLike_T] = None
         start_file: Optional[PathLike_T] = None
         start_file_header: int = 3
-        verbose: bool = True
-
-    class MissingConfigError(Exception):
-        """Missing an entry in ``Config``."""
 
     def __init__(self, ds: xr.Dataset, **config_kwargs: Any) -> None:
         """Create a new instance."""
-        self.config: TrajsDataset.Config = self.Config(**config_kwargs)
-        self.ds: xr.Dataset = ds
+        self.config: ExtendedTrajsDataset.Config
+        super().__init__(ds, **config_kwargs)
 
     def get_var_data(
         self,
