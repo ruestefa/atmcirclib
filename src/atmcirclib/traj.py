@@ -18,6 +18,7 @@ import xarray as xr
 
 # First-party
 from atmcirclib.geo import BoundingBox
+from atmcirclib.typing import NDIndex_T
 from atmcirclib.typing import PathLike_T
 
 
@@ -45,6 +46,21 @@ class TrajsDataset:
         """Create a new instance."""
         self.config: TrajsDataset.Config = self.Config(**config_kwargs)
         self.ds: xr.Dataset = ds
+
+    def get_data(
+        self,
+        name: str,
+        idx_time: NDIndex_T = None,
+        idx_traj: NDIndex_T = None,
+        replace_vnan: bool = True,
+    ) -> npt.NDArray[np.float_]:
+        """Get data (sub-) array of variable with NaNs as missing values."""
+        arr: npt.NDArray[np.float32] = np.array(
+            self.ds.variables[name].data[idx_time, idx_traj], np.float32
+        )
+        if replace_vnan:
+            arr[arr == self.config.nan] = np.nan
+        return arr
 
 
 # pylint: disable=R0904  # too-many-public-methods (>20)
@@ -83,19 +99,6 @@ class ExtendedTrajsDataset(TrajsDataset):
         """Create a new instance."""
         self.config: ExtendedTrajsDataset.Config
         super().__init__(ds, **config_kwargs)
-
-    def get_var_data(
-        self,
-        name: str,
-        idx_time: Union[int, slice] = slice(None),
-        idx_traj: Union[int, slice] = slice(None),
-    ) -> npt.NDArray[np.float_]:
-        """Get data (sub-) array of variable with NaNs as missing values."""
-        arr: npt.NDArray[np.float32] = np.array(
-            self.ds.variables[name].data[idx_time, idx_traj], np.float32
-        )
-        arr[arr == self.config.nan] = np.nan
-        return arr
 
     def only(self, **criteria: Any) -> TrajsDataset:
         """Return a copy with only those trajs that fulfill the given criteria.

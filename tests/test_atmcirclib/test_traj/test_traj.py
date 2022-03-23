@@ -1,5 +1,6 @@
 """Test ``atmcirclib.traj``."""
 # Standard library
+import dataclasses as dc
 from typing import Any
 from typing import Optional
 from typing import Union
@@ -12,6 +13,7 @@ import xarray as xr
 
 # First-party
 from atmcirclib.traj import TrajsDataset
+from atmcirclib.typing import NDIndex_T
 
 RAW_COORDS_D: dict[str, list[float]] = {}
 RAW_DATA_D: dict[str, list[list[float]]] = {}
@@ -338,3 +340,72 @@ class Test_Init:
         trajs_exp = TrajsDataset(ds, nan=666)
         assert trajs_ref.config.nan == -999
         assert trajs_exp.config.nan == 666
+
+
+class Test_GetData:
+    """Test method ``get_data``."""
+
+    def test_default(self) -> None:
+        """Call with default options, whereby -999 are replaced by nans."""
+        trajs = TrajsDataset(create_trajs_xr_dataset())
+        for name, ref in REF_DATA_D.items():
+            # Raw field contains -999
+            exp = trajs.ds.variables[name].data
+            assert np.allclose(exp, ref)
+            # -999 replaced by nans by default
+            exp = trajs.get_data(name)
+            assert not np.allclose(exp, ref, equal_nan=True)
+            ref = np.where(ref == VNAN, np.nan, ref)
+            assert np.allclose(exp, ref, equal_nan=True)
+
+    def test_default_explicit(self) -> None:
+        """Call with explicit default values."""
+        trajs = TrajsDataset(create_trajs_xr_dataset())
+        for name, ref in REF_DATA_D.items():
+            ref = trajs.get_data(name)
+            exp = trajs.get_data(
+                name=name,
+                idx_time=None,
+                idx_traj=None,
+                replace_vnan=True,
+            )
+            assert np.allclose(ref, exp, equal_nan=True)
+
+    def test_replace_vnan(self) -> None:
+        """Don't replace -999 by nans."""
+        trajs = TrajsDataset(create_trajs_xr_dataset())
+        for name, ref in REF_DATA_D.items():
+            exp = trajs.get_data(name, replace_vnan=False)
+            assert np.allclose(exp, ref, equal_nan=True)
+
+    @dc.dataclass
+    class IndexingTestParams:
+        """Parameters passed to ``test_indexing``."""
+
+        idx_time: NDIndex_T = None
+        idx_traj: NDIndex_T = None
+
+    @pytest.mark.parametrize(
+        "c",
+        [
+            IndexingTestParams(None, None),
+            IndexingTestParams(0, None),
+            IndexingTestParams(None, -1),
+            IndexingTestParams(3, 4),
+            IndexingTestParams((2, 3), 0),
+            IndexingTestParams(None, slice(None, None, 3)),
+            IndexingTestParams(slice(4, -1, 3), slice(None, None, -1)),
+        ],
+    )
+    def test_indexing(self, c: IndexingTestParams) -> None:
+        """Get subarrays by indexing."""
+        trajs = TrajsDataset(create_trajs_xr_dataset())
+        idcs: dict[str, NDIndex_T] = {}
+        if c.idx_time is not None:
+            idcs["idx_time"] = c.idx_time
+        if c.idx_traj is not None:
+            idcs["idx_traj"] = c.idx_traj
+        for name, ref in REF_DATA_D.items():
+            exp = trajs.get_data(name, replace_vnan=False, **idcs)
+            ref = ref[c.idx_time, c.idx_traj]
+            assert np.allclose(exp, ref)
