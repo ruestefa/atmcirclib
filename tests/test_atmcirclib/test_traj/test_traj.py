@@ -319,11 +319,11 @@ def test_ref_data() -> None:
 class Test_Init:
     """Test initialization."""
 
-    @pytest.mark.xfail(raises=TypeError)
     def test_fail(self) -> None:
         """Initialize without arguments, which should fail."""
-        # pylint: disable=E1120  # no-value-for-parameter
-        TrajsDataset()  # type: ignore  # noqa
+        with pytest.raises(TypeError):
+            # pylint: disable=E1120  # no-value-for-parameter
+            TrajsDataset()  # type: ignore  # noqa
 
     def test_ds(self) -> None:
         """Initalize with xarray dataset."""
