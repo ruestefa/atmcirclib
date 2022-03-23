@@ -291,30 +291,33 @@ def create_trajs_xr_dataset(
     )
 
 
-def test_create_trajs_xr_dataset() -> None:
-    """Test creation of a mock trajs dataset."""
-    ds = create_trajs_xr_dataset()
-    assert ds.attrs == ATTRS
-    # Check time coordinate
-    assert set(dict(ds.coords)) == {"time"}
-    assert ds.coords["time"].attrs == ATTRS_D["time"]
-    assert (ds.coords["time"].data.astype(int) == REF_COORDS_D["time"]).all()
-    # Check variables
-    assert set(dict(ds.variables).keys()) == set(REF_DATA_D) | set(REF_COORDS_D)
-    for name, data in REF_DATA_D.items():
-        assert ds.variables[name].attrs == ATTRS_D[name]
-        assert np.allclose(ds.variables[name].data, data)
+# pylint: disable=R0201  # no-self-use
+class Test_TestData:
+    """Test test data."""
 
+    def test_create_trajs_xr_dataset(self) -> None:
+        """Test creation of a mock trajs dataset."""
+        ds = create_trajs_xr_dataset()
+        assert ds.attrs == ATTRS
+        # Check time coordinate
+        assert set(dict(ds.coords)) == {"time"}
+        assert ds.coords["time"].attrs == ATTRS_D["time"]
+        assert (ds.coords["time"].data.astype(int) == REF_COORDS_D["time"]).all()
+        # Check variables
+        assert set(dict(ds.variables).keys()) == set(REF_DATA_D) | set(REF_COORDS_D)
+        for name, data in REF_DATA_D.items():
+            assert ds.variables[name].attrs == ATTRS_D[name]
+            assert np.allclose(ds.variables[name].data, data)
 
-def test_ref_data() -> None:
-    """Make sure dataset contains copies of ref array."""
-    name = "z"
-    ds = create_trajs_xr_dataset()
-    assert np.allclose(ds.variables[name].data, REF_DATA_D[name].data)
-    mask = ds.variables[name].data > 3000
-    assert mask.sum() > 0
-    ds.variables[name].data[mask] += 100
-    assert not np.allclose(ds.variables[name].data, REF_DATA_D[name].data)
+    def test_ref_data(self) -> None:
+        """Make sure dataset contains copies of ref array."""
+        name = "z"
+        ds = create_trajs_xr_dataset()
+        assert np.allclose(ds.variables[name].data, REF_DATA_D[name].data)
+        mask = ds.variables[name].data > 3000
+        assert mask.sum() > 0
+        ds.variables[name].data[mask] += 100
+        assert not np.allclose(ds.variables[name].data, REF_DATA_D[name].data)
 
 
 # pylint: disable=R0201  # no-self-use
