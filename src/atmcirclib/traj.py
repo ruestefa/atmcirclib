@@ -5,6 +5,7 @@ from __future__ import annotations
 import dataclasses as dc
 import datetime as dt
 from collections.abc import Sequence
+from pathlib import Path
 from typing import Any
 from typing import cast
 from typing import Optional
@@ -50,11 +51,15 @@ class TrajsDataset:
     def get_data(
         self,
         name: str,
-        idx_time: NDIndex_T = None,
-        idx_traj: NDIndex_T = None,
+        idx_time: NDIndex_T = slice(None),
+        idx_traj: NDIndex_T = slice(None),
         replace_vnan: bool = True,
     ) -> npt.NDArray[np.float_]:
         """Get data (sub-) array of variable with NaNs as missing values."""
+        if idx_time is None:
+            raise ValueError("idx_time must not be None; consider slice(None)")
+        if idx_traj is None:
+            raise ValueError("idx_traj must not be None; consider slice(None)")
         arr: npt.NDArray[np.float32] = np.array(
             self.ds.variables[name].data[idx_time, idx_traj], np.float32
         )
@@ -88,10 +93,7 @@ class ExtendedTrajsDataset(TrajsDataset):
 
         Properties:
 
-            boundary_size_km: Size of the domain boundary zone in kilometers.
-
-            const_file: Path to file with constant model fields; required for
-                removing trajs in the domain boundary zone etc.
+            boundary_size_deg: Size of the domain boundary zone in degrees.
 
             start_file: Path to text file with start points; required to provide
                 start points, e.g., to a plotting routine to choose proper bins.
@@ -100,15 +102,21 @@ class ExtendedTrajsDataset(TrajsDataset):
 
         """
 
-        boundary_size_km: float = 100.0
-        const_file: Optional[PathLike_T] = None
+        boundary_size_deg: float = 1.0  # TODO eliminate
         start_file: Optional[PathLike_T] = None
         start_file_header: int = 3
 
-    def __init__(self, ds: xr.Dataset, **config_kwargs: Any) -> None:
+    def __init__(
+        self,
+        ds: xr.Dataset,
+        *,
+        _grid: Optional[COSMOGridFile] = None,  # TODO remove
+        **config_kwargs: Any,
+    ) -> None:
         """Create a new instance."""
         self.config: ExtendedTrajsDataset.Config
         super().__init__(ds, **config_kwargs)
+        self._grid: Optional[COSMOGridFile] = _grid
 
     def only(self, **criteria: Any) -> TrajsDataset:
         """Return a copy with only those trajs that fulfill the given criteria.
@@ -189,59 +197,6 @@ class ExtendedTrajsDataset(TrajsDataset):
         if z is not None:
             update_mask(mask, self._get_traj_mask_z(*z))
         return mask
-
-    def open_const_file(self) -> xr.Dataset:
-        """Open file ``Config.const_file``."""
-        if self.config.const_file is None:
-            raise self.MissingConfigError("const_file")
-        # mypy thinks return type is Any (mypy v0.941, numpy v1.22.3)
-        return cast(xr.Dataset, xr.open_dataset(self.config.const_file))
-
-    def get_domain_proj(self) -> ccrs.Projection:
-        """Get projection of simulation data."""
-        with self.open_const_file() as ds:
-            # pylint: disable=E0110  # abstract-class-instantiated (RotatedPole)
-            return ccrs.RotatedPole(
-                pole_latitude=ds.rotated_pole.grid_north_pole_latitude,
-                pole_longitude=ds.rotated_pole.grid_north_pole_longitude,
-            )
-
-    def get_bbox_xy(self, inner: bool = False) -> BoundingBox:
-        """Get (lon, lat) bounding box, optionally minus boundary zone."""
-        with self.open_const_file() as ds_const:
-            bbox = BoundingBox.from_coords(ds_const.rlon.data, ds_const.rlat.data)
-        if inner:
-            km_per_deg = 110.0
-            bbox = bbox.shrink(self.config.boundary_size_km / km_per_deg)
-        return bbox
-
-    def get_bbox_xz(self, inner: bool = False) -> BoundingBox:
-        """Get (lon, z) bounding box, optionally minus horiz. boundary zone."""
-        bbox_xy = self.get_bbox_xy(inner=inner)
-        zmin = 0.0
-        with self.open_const_file() as ds_const:
-            try:
-                zmax = float(ds_const.height_toa.data)
-            except AttributeError:
-                zmax = self.get_start_points(try_file=True)["z"].max()
-        zmax /= 1000.0  # m => km
-        return BoundingBox(
-            llx=bbox_xy.llx,
-            urx=bbox_xy.urx,
-            lly=zmin,
-            ury=zmax,
-        )
-
-    def get_bbox_yz(self, inner: bool = False) -> BoundingBox:
-        """Get (lat, z) bounding box, optionally minus horiz. boundary zone."""
-        bbox_xy = self.get_bbox_xy(inner=inner)
-        bbox_xz = self.get_bbox_xz(inner=inner)
-        return BoundingBox(
-            llx=bbox_xy.lly,
-            urx=bbox_xy.ury,
-            lly=bbox_xz.lly,
-            ury=bbox_xz.ury,
-        )
 
     # Note: Typing return array as npt.NDArray[np.float_] leads to overload error
     # when accessing fields by name (e.g., points["x"]) (numpy v1.22.2)
@@ -417,7 +372,7 @@ class ExtendedTrajsDataset(TrajsDataset):
         new_ds = xr.Dataset(
             data_vars=new_data_vars, coords=self.ds.coords, attrs=self.ds.attrs
         )
-        return type(self)(ds=new_ds, **dc.asdict(self.config))
+        return type(self)(ds=new_ds, _grid=self._grid, **dc.asdict(self.config))
 
     def _get_traj_mask_full(self, value: bool) -> npt.NDArray[np.bool_]:
         """Get a trajs mask."""
@@ -431,7 +386,11 @@ class ExtendedTrajsDataset(TrajsDataset):
 
     def _get_traj_mask_any_boundary(self) -> npt.NDArray[np.bool_]:
         """Get 1D mask indicating all trajs ever reaching the boundary zone."""
-        llrlon, urrlon, llrlat, urrlat = self.get_bbox_xy(inner=True)
+        if self._grid is None:
+            raise Exception("must pass _grid to identify boundary trajs")
+        llrlon, urrlon, llrlat, urrlat = self._grid.get_bbox_xy().shrink(
+            self.config.boundary_size_deg
+        )
         rlon, rlat = self.ds.longitude.data, self.ds.latitude.data
         nan_mask = self._get_traj_mask_any_incomplete()
         rlon_mask = np.where(nan_mask, True, (rlon < llrlon) | (rlon > urrlon))
@@ -472,3 +431,56 @@ class ExtendedTrajsDataset(TrajsDataset):
         if vmax is not None:
             mask &= arr <= vmax
         return mask
+
+
+class COSMOGridFile:
+    """File with grid information of COSMO simulation."""
+
+    def __init__(self, path: PathLike_T) -> None:
+        """Create new instance."""
+        self._path: Path = Path(path)
+
+    def get_bbox_xy(self) -> BoundingBox:
+        """Get (lon, lat) bounding box."""
+        with self.open() as ds_const:
+            bbox = BoundingBox.from_coords(ds_const.rlon.data, ds_const.rlat.data)
+        return bbox
+
+    def get_bbox_xz(self) -> BoundingBox:
+        """Get (lon, z) bounding box."""
+        bbox_xy = self.get_bbox_xy()
+        zmin = 0.0
+        with self.open() as ds_const:
+            zmax = float(ds_const.height_toa.data)
+        zmax /= 1000.0  # m => km
+        return BoundingBox(
+            llx=bbox_xy.llx,
+            urx=bbox_xy.urx,
+            lly=zmin,
+            ury=zmax,
+        )
+
+    def get_bbox_yz(self) -> BoundingBox:
+        """Get (lat, z) bounding box."""
+        bbox_xy = self.get_bbox_xy()
+        bbox_xz = self.get_bbox_xz()
+        return BoundingBox(
+            llx=bbox_xy.lly,
+            urx=bbox_xy.ury,
+            lly=bbox_xz.lly,
+            ury=bbox_xz.ury,
+        )
+
+    def get_proj(self) -> ccrs.Projection:
+        """Get domain projection."""
+        with self.open() as ds:
+            # pylint: disable=E0110  # abstract-class-instantiated (RotatedPole)
+            return ccrs.RotatedPole(
+                pole_latitude=ds.rotated_pole.grid_north_pole_latitude,
+                pole_longitude=ds.rotated_pole.grid_north_pole_longitude,
+            )
+
+    def open(self) -> xr.Dataset:
+        """Open file ``Config.const_file``."""
+        # mypy thinks return type is Any (mypy v0.941, numpy v1.22.3)
+        return cast(xr.Dataset, xr.open_dataset(self._path))

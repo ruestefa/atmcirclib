@@ -3,6 +3,7 @@ from __future__ import annotations
 
 # Standard library
 from collections.abc import Sequence
+from typing import cast
 from typing import NamedTuple
 from typing import Optional
 from typing import Union
@@ -44,12 +45,29 @@ class BoundingBox(NamedTuple):
         """Get limits in y direction."""
         return (self.lly, self.ury)
 
-    def shrink(self, bnd: float) -> BoundingBox:
-        """Return a copy shrunk by ``bnd`` on all four sides; stop at center."""
-        llx = self.llx + bnd
-        lly = self.lly + bnd
-        urx = self.urx - bnd
-        ury = self.ury - bnd
+    def shrink(self, bnd: Union[float, tuple[float, float]]) -> BoundingBox:
+        """Return a copy shrunk by ``bnd`` from the outside in.
+
+        Args:
+            bnd: Either a single value that is applied to all four boundaries,
+                or separate values ``(dx, dy)``, whereby the domain is shrunk
+                from the left and right by ``dx`` and from the bottom and top by
+                ``dy``.
+
+        """
+        try:
+            bnd_x = bnd_y = float(cast(float, bnd))
+        except TypeError:
+            try:
+                bnd_x, bnd_y = map(float, cast(tuple[float, float], bnd))
+            except TypeError as e:
+                raise ValueError(
+                    f"bnd must be a float or a pair of floats, not {bnd}"
+                ) from e
+        llx = self.llx + bnd_x
+        urx = self.urx - bnd_x
+        lly = self.lly + bnd_y
+        ury = self.ury - bnd_y
         if llx > urx:
             llx = urx = 0.5 * (llx + urx)
         if lly > ury:

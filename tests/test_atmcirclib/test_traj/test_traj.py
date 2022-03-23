@@ -12,6 +12,8 @@ import pytest
 import xarray as xr
 
 # First-party
+from atmcirclib.traj import COSMOGridFile
+from atmcirclib.traj import ExtendedTrajsDataset  # TODO eliminate
 from atmcirclib.traj import TrajsDataset
 from atmcirclib.typing import NDIndex_T
 
@@ -368,8 +370,8 @@ class Test_GetData:
             ref = trajs.get_data(name)
             exp = trajs.get_data(
                 name=name,
-                idx_time=None,
-                idx_traj=None,
+                idx_time=slice(None),
+                idx_traj=slice(None),
                 replace_vnan=True,
             )
             assert np.allclose(ref, exp, equal_nan=True)
@@ -385,14 +387,14 @@ class Test_GetData:
     class IndexingTestParams:
         """Parameters passed to ``test_indexing``."""
 
-        idx_time: NDIndex_T = None
-        idx_traj: NDIndex_T = None
+        idx_time: Optional[NDIndex_T] = None
+        idx_traj: Optional[NDIndex_T] = None
 
     @pytest.mark.parametrize(
         "c",
         [
             IndexingTestParams(None, None),
-            IndexingTestParams(0, None),
+            IndexingTestParams(0, slice(None)),
             IndexingTestParams(None, -1),
             IndexingTestParams(3, 4),
             IndexingTestParams((2, 3), 0),
@@ -404,11 +406,38 @@ class Test_GetData:
         """Get subarrays by indexing."""
         trajs = TrajsDataset(create_trajs_xr_dataset())
         idcs: dict[str, NDIndex_T] = {}
-        if c.idx_time is not None:
+        if c.idx_time is None:
+            c.idx_time = slice(None)
+        else:
             idcs["idx_time"] = c.idx_time
-        if c.idx_traj is not None:
+        if c.idx_traj is None:
+            c.idx_traj = slice(None)
+        else:
             idcs["idx_traj"] = c.idx_traj
         for name, ref in REF_DATA_D.items():
             exp = trajs.get_data(name, replace_vnan=False, **idcs)
             ref = ref[c.idx_time, c.idx_traj]
             assert np.allclose(exp, ref)
+
+
+class Test_Count:
+    """Count trajs that meet given criteria."""
+
+    def test_incomplete(self) -> None:
+        """Count trajs that leave the domain."""
+        # TODO Replace ExtendedTrajsDataset by TrajsDataset
+        trajs = ExtendedTrajsDataset(create_trajs_xr_dataset())
+        assert trajs.count(incomplete=True) == 1
+        assert trajs.count(incomplete=False) == 4
+
+    # Temporary test to be used to reimplement selection of boundary trajs
+    # (pull domain info, incl. boundary zone coords, out of TrajsDataset)
+    def test_boundary(self) -> None:
+        """Count trajs that reach the boundary zone."""
+        # TODO Replace ExtendedTrajsDataset by TrajsDataset
+        trajs = ExtendedTrajsDataset(
+            create_trajs_xr_dataset(),
+            _grid=COSMOGridFile("data/online/lfff00000000.nc"),
+            boundary_size_deg=4,
+        )
+        assert trajs.count(boundary=True) == 2
