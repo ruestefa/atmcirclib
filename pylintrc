@@ -15,6 +15,7 @@ disable =
     R1720, # no-else-raise: Unnecessary "elif" after "raise"
     R1724, # no-else-continue: Unnecessary "elif" after "continue"
     W1116, # isinstance-second-argument-not-valid-type
+    W0511, # fixme: Flag TODO
     W0602, # global-variable-not-assigned
 # Ignore (sub-)modules that trigger errors like E1101 (no-member) or E0611 (no-name-in-module)
 ignored-modules =
