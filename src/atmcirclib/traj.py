@@ -62,6 +62,16 @@ class TrajsDataset:
             arr[arr == self.config.nan] = np.nan
         return arr
 
+    @classmethod
+    def from_file(cls, path: PathLike_T, **config_kwargs: Any) -> TrajsDataset:
+        """Read trajs dataset from file."""
+        try:
+            # ds = xr.open_dataset(path, engine="netcdf4")
+            ds = xr.open_dataset(path)
+        except Exception as e:
+            raise ValueError(f"error opening trajectories files '{path}'") from e
+        return cls(ds=ds, **config_kwargs)
+
 
 # pylint: disable=R0904  # too-many-public-methods (>20)
 class ExtendedTrajsDataset(TrajsDataset):
@@ -462,13 +472,3 @@ class ExtendedTrajsDataset(TrajsDataset):
         if vmax is not None:
             mask &= arr <= vmax
         return mask
-
-    @classmethod
-    def from_file(cls, path: PathLike_T, **config_kwargs: Any) -> TrajsDataset:
-        """Read trajs dataset from file."""
-        try:
-            # ds = xr.open_dataset(path, engine="netcdf4")
-            ds = xr.open_dataset(path)
-        except Exception as e:
-            raise ValueError(f"error opening trajectories files '{path}'") from e
-        return cls(ds=ds, **config_kwargs)
