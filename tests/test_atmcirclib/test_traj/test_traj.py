@@ -304,11 +304,25 @@ def test_create_trajs_xr_dataset() -> None:
 
 
 # pylint: disable=R0201  # no-self-use
-class Test_Base:
-    """Test basic functionality of ``TrajsDataset``."""
+class Test_Init:
+    """Test initialization of ``TrajsDataset``."""
 
     @pytest.mark.xfail(raises=TypeError)
-    def test_init_fail(self) -> None:
-        """Initialization w/o arguments fails."""
+    def test_fail(self) -> None:
+        """Initialize without arguments, which should fail."""
         # pylint: disable=E1120  # no-value-for-parameter
         TrajsDataset()  # type: ignore  # noqa
+
+    def test_ds(self) -> None:
+        """Initalize with xarray dataset."""
+        ds = create_trajs_xr_dataset()
+        trajs = TrajsDataset(ds)
+        assert trajs.ds == ds
+
+    def test_config(self) -> None:
+        """Initialize with changed config parameter."""
+        ds = create_trajs_xr_dataset()
+        trajs_ref = TrajsDataset(ds)
+        trajs_exp = TrajsDataset(ds, nan=666)
+        assert trajs_ref.config.nan == -999
+        assert trajs_exp.config.nan == 666
