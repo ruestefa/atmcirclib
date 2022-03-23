@@ -2,6 +2,7 @@
 # Standard library
 from typing import Any
 from typing import Optional
+from typing import Union
 
 # Third-party
 import numpy as np
@@ -17,6 +18,7 @@ RAW_DATA_D: dict[str, list[list[float]]] = {}
 SCALE_FACT_D: dict[str, float] = {}
 DTYPE_D: dict[str, npt.DTypeLike] = {}
 ATTRS_D: dict[str, dict[str, str]] = {}
+REF_DATA_D: dict[str, npt.NDArray[np.generic]]
 
 # Test data is based on the file traj_t001914_p001.nc from the simulation
 # cosmo_0.04_701x661x80/20s_explicit/2016092000/traj-pvtend.45ms-1_-4h_21_12_reduced
@@ -215,74 +217,75 @@ RAW_DATA_D[_name] = [  # multiplied by 1e12 except -999
 ]
 
 
+def get_ref_arrs(
+    raw_d: Union[dict[str, list[float]], dict[str, list[list[float]]]]
+) -> dict[str, npt.NDArray[np.generic]]:
+    """Turn raw value lists into properly scaled data arrays."""
+    ref_d: dict[str, npt.NDArray[np.generic]] = {}
+    arr: npt.NDArray[np.generic]
+    for name, raw_data in raw_d.items():
+        arr = np.array(raw_data, DTYPE_D.get(name, np.float32))
+        if name in SCALE_FACT_D:
+            arr = np.where(arr == VNAN, VNAN, arr * SCALE_FACT_D[name])
+        ref_d[name] = arr
+    return ref_d
+
+
+REF_DATA_D = get_ref_arrs(RAW_DATA_D)
+REF_COORDS_D = get_ref_arrs(RAW_COORDS_D)
+
+
 def create_trajs_xr_dataset(
     *,
     attrs: Optional[dict[str, Any]] = None,
-    raw_coords_d: Optional[dict[str, list[float]]] = None,
-    raw_data_d: Optional[dict[str, list[list[float]]]] = None,
-    scale_fact_d: Optional[dict[str, float]] = None,
+    coords_d: Optional[dict[str, npt.NDArray[np.generic]]] = None,
+    data_d: Optional[dict[str, npt.NDArray[np.generic]]] = None,
     attrs_d: Optional[dict[str, dict[str, str]]] = None,
-    dtype_d: Optional[dict[str, npt.DTypeLike]] = None,
-    vnan: float = VNAN,
 ) -> xr.Dataset:
     """Create a mock trajs xarray dataset as read from a NetCDF file."""
     if attrs is None:
         attrs = ATTRS
-    if raw_coords_d is None:
-        raw_coords_d = RAW_COORDS_D
-    if raw_data_d is None:
-        raw_data_d = RAW_DATA_D
-    if scale_fact_d is None:
-        scale_fact_d = SCALE_FACT_D
+    if coords_d is None:
+        coords_d = REF_COORDS_D
+    if data_d is None:
+        data_d = REF_DATA_D
     if attrs_d is None:
         attrs_d = ATTRS_D
-    if dtype_d is None:
-        dtype_d = DTYPE_D
 
-    if n := len(raw_coords_d) != 1:
+    if n := len(coords_d) != 1:
         raise NotImplementedError(
-            f"{n} coords: " + ", ".join(map("'{}'".format, raw_coords_d))
+            f"{n} coords: " + ", ".join(map("'{}'".format, coords_d))
         )
-    coord_name = next(iter(raw_coords_d))
+    coord_name = next(iter(coords_d))
     dims = (coord_name, "id")
 
     def create_coord(name: str) -> xr.DataArray:
         """Create coordinate variable."""
-        assert raw_coords_d is not None  # mypy
-        assert dtype_d is not None  # mypy
+        assert coords_d is not None  # mypy
         assert attrs_d is not None  # mypy
-        data: npt.NDArray[np.generic] = np.array(
-            raw_coords_d[name], dtype=dtype_d.get(name, np.float32)
-        )
         return xr.DataArray(
-            data=data,
-            coords={name: data},
+            data=coords_d[name].copy(),
+            coords={name: coords_d[name].copy()},
             dims=(name,),
             name=name,
-            attrs=attrs_d[name],
+            attrs=dict(attrs_d[name]),
         )
 
     def create_variable(name: str) -> xr.DataArray:
         """Create variable data array."""
-        assert raw_data_d is not None  # mypy
-        assert dtype_d is not None  # mypy
-        assert scale_fact_d is not None  # mypy
+        assert data_d is not None  # mypy
         assert attrs_d is not None  # mypy
-        data: npt.NDArray[np.generic] = np.array(
-            raw_data_d[name], dtype_d.get(name, np.float32)
-        )
-        data[data != vnan] *= scale_fact_d.get(name, 1)
         return xr.DataArray(
-            data=data,
+            data=data_d[name].copy(),
             dims=dims,
             name=name,
-            attrs=attrs_d[name],
+            attrs=dict(attrs_d[name]),
         )
 
     return xr.Dataset(
-        coords={name: create_coord(name) for name in raw_coords_d},
-        data_vars={name: create_variable(name) for name in raw_data_d},
-        attrs=attrs,
+        coords={name: create_coord(name) for name in coords_d},
+        data_vars={name: create_variable(name) for name in data_d},
+        attrs=dict(attrs),
     )
 
 
@@ -293,19 +296,28 @@ def test_create_trajs_xr_dataset() -> None:
     # Check time coordinate
     assert set(dict(ds.coords)) == {"time"}
     assert ds.coords["time"].attrs == ATTRS_D["time"]
-    assert (ds.coords["time"].data.astype(int) == RAW_COORDS_D["time"]).all()
+    assert (ds.coords["time"].data.astype(int) == REF_COORDS_D["time"]).all()
     # Check variables
-    assert set(dict(ds.variables).keys()) == set(RAW_DATA_D) | set(RAW_COORDS_D)
-    for name, raw_data in RAW_DATA_D.items():
+    assert set(dict(ds.variables).keys()) == set(REF_DATA_D) | set(REF_COORDS_D)
+    for name, data in REF_DATA_D.items():
         assert ds.variables[name].attrs == ATTRS_D[name]
-        data: npt.NDArray[np.float32] = np.array(raw_data, np.float32)
-        data = np.where(data == VNAN, VNAN, data * SCALE_FACT_D.get(name, 1))
         assert np.allclose(ds.variables[name].data, data)
+
+
+def test_ref_data() -> None:
+    """Make sure dataset contains copies of ref array."""
+    name = "z"
+    ds = create_trajs_xr_dataset()
+    assert np.allclose(ds.variables[name].data, REF_DATA_D[name].data)
+    mask = ds.variables[name].data > 3000
+    assert mask.sum() > 0
+    ds.variables[name].data[mask] += 100
+    assert not np.allclose(ds.variables[name].data, REF_DATA_D[name].data)
 
 
 # pylint: disable=R0201  # no-self-use
 class Test_Init:
-    """Test initialization of ``TrajsDataset``."""
+    """Test initialization."""
 
     @pytest.mark.xfail(raises=TypeError)
     def test_fail(self) -> None:
