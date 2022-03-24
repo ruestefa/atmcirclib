@@ -12,7 +12,7 @@ import pytest
 import xarray as xr
 
 # First-party
-from atmcirclib.traj import COSMOGridFile
+from atmcirclib.traj import COSMOGridDataset
 from atmcirclib.traj import ExtendedTrajsDataset  # TODO eliminate
 from atmcirclib.traj import TrajsDataset
 from atmcirclib.typing import NDIndex_T
@@ -437,7 +437,7 @@ class Test_Count:
         # TODO Replace ExtendedTrajsDataset by TrajsDataset
         trajs = ExtendedTrajsDataset(
             create_trajs_xr_dataset(),
-            _grid=COSMOGridFile("data/online/lfff00000000.nc"),
+            _grid=COSMOGridDataset.from_file("data/online/lfff00000000.nc"),
             boundary_size_deg=4,
         )
         assert trajs.count(boundary=True) == 2

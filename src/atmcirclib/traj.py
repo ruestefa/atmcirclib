@@ -5,7 +5,6 @@ from __future__ import annotations
 import dataclasses as dc
 import datetime as dt
 from collections.abc import Sequence
-from pathlib import Path
 from typing import Any
 from typing import cast
 from typing import Optional
@@ -110,13 +109,13 @@ class ExtendedTrajsDataset(TrajsDataset):
         self,
         ds: xr.Dataset,
         *,
-        _grid: Optional[COSMOGridFile] = None,  # TODO remove
+        _grid: Optional[COSMOGridDataset] = None,  # TODO remove
         **config_kwargs: Any,
     ) -> None:
         """Create a new instance."""
         self.config: ExtendedTrajsDataset.Config
         super().__init__(ds, **config_kwargs)
-        self._grid: Optional[COSMOGridFile] = _grid
+        self._grid: Optional[COSMOGridDataset] = _grid
 
     def only(self, **criteria: Any) -> TrajsDataset:
         """Return a copy with only those trajs that fulfill the given criteria.
@@ -433,26 +432,23 @@ class ExtendedTrajsDataset(TrajsDataset):
         return mask
 
 
-class COSMOGridFile:
+class COSMOGridDataset:
     """File with grid information of COSMO simulation."""
 
-    def __init__(self, path: PathLike_T) -> None:
+    def __init__(self, ds: xr.Dataset) -> None:
         """Create new instance."""
-        self._path: Path = Path(path)
+        self.ds: xr.Dataset = ds
 
     def get_bbox_xy(self) -> BoundingBox:
         """Get (lon, lat) bounding box."""
-        with self.open() as ds_const:
-            bbox = BoundingBox.from_coords(ds_const.rlon.data, ds_const.rlat.data)
-        return bbox
+        return BoundingBox.from_coords(self.ds.rlon.data, self.ds.rlat.data)
 
     def get_bbox_xz(self) -> BoundingBox:
         """Get (lon, z) bounding box."""
         bbox_xy = self.get_bbox_xy()
         zmin = 0.0
-        with self.open() as ds_const:
-            zmax = float(ds_const.height_toa.data)
-        zmax /= 1000.0  # m => km
+        zmax = float(self.ds.height_toa.data)
+        zmax /= 1000.0  # m => km  # TODO make this more explicit
         return BoundingBox(
             llx=bbox_xy.llx,
             urx=bbox_xy.urx,
@@ -473,14 +469,15 @@ class COSMOGridFile:
 
     def get_proj(self) -> ccrs.Projection:
         """Get domain projection."""
-        with self.open() as ds:
-            # pylint: disable=E0110  # abstract-class-instantiated (RotatedPole)
-            return ccrs.RotatedPole(
-                pole_latitude=ds.rotated_pole.grid_north_pole_latitude,
-                pole_longitude=ds.rotated_pole.grid_north_pole_longitude,
-            )
+        # pylint: disable=E0110  # abstract-class-instantiated (RotatedPole)
+        return ccrs.RotatedPole(
+            pole_latitude=self.ds.rotated_pole.grid_north_pole_latitude,
+            pole_longitude=self.ds.rotated_pole.grid_north_pole_longitude,
+        )
 
-    def open(self) -> xr.Dataset:
-        """Open file ``Config.const_file``."""
+    @classmethod
+    def from_file(cls, path: PathLike_T) -> COSMOGridDataset:
+        """Create an instance from a NetCDF file."""
         # mypy thinks return type is Any (mypy v0.941, numpy v1.22.3)
-        return cast(xr.Dataset, xr.open_dataset(self._path))
+        ds: xr.Dataset = cast(xr.Dataset, xr.open_dataset(path))
+        return cls(ds)
