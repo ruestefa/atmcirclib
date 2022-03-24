@@ -116,7 +116,7 @@ class ExtendedTrajDataset(TrajDataset):
         super().__init__(ds, **config_kwargs)
         self._grid: Optional[COSMOGridDataset] = _grid
 
-    def only(self, **criteria: Any) -> TrajDataset:
+    def select(self, **criteria: Any) -> TrajDataset:
         """Return a copy with only those trajs that fulfill the given criteria.
 
         See docstring of ``get_traj_mask`` for details on the criteria.
@@ -125,7 +125,7 @@ class ExtendedTrajDataset(TrajDataset):
         mask = self.get_traj_mask(**criteria)
         return self._without_masked(~mask)
 
-    def without(self, **criteria: Any) -> TrajDataset:
+    def remove(self, **criteria: Any) -> TrajDataset:
         """Return a copy without those trajs that fulfill the given criteria.
 
         See docstring of ``get_traj_mask`` for details on the criteria.
@@ -142,6 +142,14 @@ class ExtendedTrajDataset(TrajDataset):
         """
         # mypy thinks return type is Any (mypy v0.941, numpy v1.22.3)
         return cast(int, self.get_traj_mask(**criteria).sum())
+
+    def discount(self, **criteria: Any) -> int:
+        """Count all trajs that don't fulfill the given criteria.
+
+        See docstring of ``get_traj_mask`` for details on the criteria.
+
+        """
+        return self.count() - self.count(**criteria)
 
     def get_traj_mask(
         self,
