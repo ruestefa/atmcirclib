@@ -58,9 +58,24 @@ class TrajDataset:
             raise ValueError("idx_time must not be None; consider slice(None)")
         if idx_traj is None:
             raise ValueError("idx_traj must not be None; consider slice(None)")
-        arr: npt.NDArray[np.float32] = np.array(
-            self.ds.variables[name].data[idx_time, idx_traj], np.float32
-        )
+        arr: npt.NDArray[np.float32]
+        try:
+            var = self.ds.variables[name]
+        except KeyError as e:
+            if name == "UV":
+                arr = np.sqrt(
+                    np.array(self.ds.variables["U"][idx_time, idx_traj]) ** 2,
+                    np.array(self.ds.variables["V"][idx_time, idx_traj]) ** 2,
+                ).astype(np.float32)
+            else:
+                ds_vars = ", ".join(map("'{}'".format, self.ds.variables))
+                dr_vars = ", ".join(map("'{}'".format, ["UV"]))
+                raise ValueError(
+                    f"invalid name '{name}'; neither in dataset ({ds_vars})"
+                    f" nor among implemented derived variables ({dr_vars})"
+                ) from e
+        else:
+            arr = np.array(var.data[idx_time, idx_traj], np.float32)
         if replace_vnan:
             arr[arr == self.config.nan] = np.nan
         return arr
@@ -156,6 +171,8 @@ class ExtendedTrajDataset(TrajDataset):
         *,
         incomplete: Optional[bool] = None,
         boundary: Optional[bool] = None,
+        lon: Optional[tuple[int, Optional[float], Optional[float]]] = None,
+        lat: Optional[tuple[int, Optional[float], Optional[float]]] = None,
         z: Optional[tuple[int, Optional[float], Optional[float]]] = None,
         uv: Optional[tuple[int, Optional[float], Optional[float]]] = None,
         require_all: bool = True,
@@ -170,6 +187,12 @@ class ExtendedTrajDataset(TrajDataset):
 
             boundary (optional): Select trajs that enter the boundary zone
                 (defined by ``Config.boundary_size_km``) at some point.
+
+            lon (optional): Select trajs that at a given time step are located
+                in a given longitude range.
+
+            lat (optional): Select trajs that at a given time step are located
+                in a given latitude range.
 
             z (optional): Select trajs that at a given time step are located in
                 a given height range.
@@ -199,9 +222,11 @@ class ExtendedTrajDataset(TrajDataset):
             incr = self._get_traj_mask_any_boundary()
             update_mask(mask, incr if boundary else ~incr)
         if z is not None:
-            update_mask(mask, self._get_traj_mask_z(*z))
+            arr = self.get_data("z", idx_time=z[0])
+            update_mask(mask, self._get_traj_mask_in_range(arr, z[1], z[2]))
         if uv is not None:
-            update_mask(mask, self._get_traj_mask_uv(*uv))
+            arr = self.get_data("UV", idx_time=uv[0])
+            update_mask(mask, self._get_traj_mask_in_range(arr, uv[1], uv[2]))
         return mask
 
     # Note: Typing return array as npt.NDArray[np.float_] leads to overload error
@@ -404,22 +429,6 @@ class ExtendedTrajDataset(TrajDataset):
         mask = (rlon_mask | rlat_mask).sum(axis=0) > 0
         # mypy thinks return type is Any (mypy v0.941, numpy v1.22.3)
         return cast(npt.NDArray[np.bool_], mask)
-
-    def _get_traj_mask_z(
-        self, idx_time: int, vmin: Optional[float], vmax: Optional[float]
-    ) -> npt.NDArray[np.bool_]:
-        """Get 1D mask indicating all trajs that end in a given height range."""
-        arr = self.ds.z.data[idx_time, :]
-        return self._get_traj_mask_in_range(arr, vmin, vmax)
-
-    def _get_traj_mask_uv(
-        self, idx_time: int, vmin: Optional[float], vmax: Optional[float]
-    ) -> npt.NDArray[np.bool_]:
-        """Get 1D mask indicating all trajs that end in a given UV range."""
-        arr = np.sqrt(
-            self.ds.U.data[idx_time, :] ** 2 + self.ds.V.data[idx_time, :] ** 2
-        )
-        return self._get_traj_mask_in_range(arr, vmin, vmax)
 
     def _get_traj_mask_in_range(
         self, arr: npt.NDArray[np.float_], vmin: Optional[float], vmax: Optional[float]
