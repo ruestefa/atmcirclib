@@ -9,6 +9,7 @@ from typing import Optional
 from typing import Union
 
 # Third-party
+import cartopy.crs as ccrs
 import numpy as np
 import numpy.typing as npt
 
@@ -102,3 +103,21 @@ class BoundingBox(NamedTuple):
     ) -> BoundingBox:
         """Create a new instance from coordinate arrays."""
         return cls(llx=xs[0], urx=xs[-1], lly=ys[0], ury=ys[-1])
+
+
+def unrotate_coords(
+    rlon: npt.NDArray[np.float_],
+    rlat: npt.NDArray[np.float_],
+    pole_rlon: float,
+    pole_rlat: float,
+    transpose: bool = False,
+) -> tuple[npt.NDArray[np.float_], npt.NDArray[np.float_]]:
+    """Turn 1D rotated lon/lat coordinates into 2D regular lon/lat arrays."""
+    proj_rot = ccrs.RotatedPole(pole_longitude=pole_rlon, pole_latitude=pole_rlat)
+    proj_geo = ccrs.PlateCarree()
+    rlon2d, rlat2d = np.meshgrid(rlon, rlat)
+    lon, lat, _ = np.transpose(proj_geo.transform_points(proj_rot, rlon2d, rlat2d))
+    if transpose:
+        lon = lon.T
+        lat = lat.T
+    return (lon, lat)
