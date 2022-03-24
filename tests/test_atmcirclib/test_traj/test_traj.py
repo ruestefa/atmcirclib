@@ -19,6 +19,8 @@ from atmcirclib.traj import ExtendedTrajDataset  # TODO eliminate
 from atmcirclib.traj import TrajDataset
 from atmcirclib.typing import NDIndex_T
 
+# pylint: disable=R0201  # no-self-use
+
 RAW_COORDS_D: dict[str, list[float]] = {}
 RAW_DATA_D: dict[str, list[list[float]]] = {}
 SCALE_FACT_D: dict[str, float] = {}
@@ -295,7 +297,6 @@ def create_trajs_xr_dataset(
     )
 
 
-# pylint: disable=R0201  # no-self-use
 class Test_TestData:
     """Test test data."""
 
@@ -324,7 +325,6 @@ class Test_TestData:
         assert not np.allclose(ds.variables[name].data, REF_DATA_D[name].data)
 
 
-# pylint: disable=R0201  # no-self-use
 class Test_Init:
     """Test initialization."""
 
