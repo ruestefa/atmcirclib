@@ -4,6 +4,7 @@ from __future__ import annotations
 # Standard library
 import dataclasses as dc
 from typing import Any
+from typing import cast
 from typing import Optional
 from typing import Union
 
@@ -443,3 +444,37 @@ class Test_Count:
             boundary_size_deg=4,
         )
         assert trajs.count(boundary=True) == 2
+
+    @dc.dataclass
+    class _TestCountConfig:
+        """Configuration of ``test_z``."""
+
+        incomplete: Optional[bool] = None
+        boundary: Optional[bool] = None
+        z: Optional[tuple[int, Optional[float], Optional[float]]] = None
+        uv: Optional[tuple[int, Optional[float], Optional[float]]] = None
+        require_all: bool = True
+        n: int = -1
+
+    @pytest.mark.parametrize(
+        "c",
+        [
+            _TestCountConfig(n=4),
+            _TestCountConfig(z=(0, 3000, None), n=3),
+        ],
+    )
+    def test_complete(self, c: _TestCountConfig) -> None:
+        """Count only complete trajs trajs that meet the given criteria."""
+        # TODO Replace ExtendedTrajDataset by TrajDataset
+        trajs = cast(
+            ExtendedTrajDataset,
+            ExtendedTrajDataset(create_trajs_xr_dataset()).select(incomplete=False),
+        )
+        n = trajs.count(
+            incomplete=c.incomplete,
+            boundary=c.boundary,
+            z=c.z,
+            uv=c.uv,
+            require_all=c.require_all,
+        )
+        assert n == c.n

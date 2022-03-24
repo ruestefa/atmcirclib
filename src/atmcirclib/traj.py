@@ -156,8 +156,8 @@ class ExtendedTrajDataset(TrajDataset):
         *,
         incomplete: Optional[bool] = None,
         boundary: Optional[bool] = None,
-        uv: Optional[tuple[int, float, float]] = None,
-        z: Optional[tuple[int, float, float]] = None,
+        z: Optional[tuple[int, Optional[float], Optional[float]]] = None,
+        uv: Optional[tuple[int, Optional[float], Optional[float]]] = None,
         require_all: bool = True,
     ) -> npt.NDArray[np.bool_]:
         """Get a mask indicating which trajs fulfill a combination of criteria.
@@ -171,11 +171,11 @@ class ExtendedTrajDataset(TrajDataset):
             boundary (optional): Select trajs that enter the boundary zone
                 (defined by ``Config.boundary_size_km``) at some point.
 
-            uv (optional): Select trajs that at a given time step exhibit wind
-                speed in a given range.
-
             z (optional): Select trajs that at a given time step are located in
                 a given height range.
+
+            uv (optional): Select trajs that at a given time step exhibit wind
+                speed in a given range.
 
             require_all (optional): Only select trajs that fulfil all given
                 criteria; otherwise, any one given criterion is sufficient.
@@ -198,10 +198,10 @@ class ExtendedTrajDataset(TrajDataset):
         if boundary is not None:
             incr = self._get_traj_mask_any_boundary()
             update_mask(mask, incr if boundary else ~incr)
-        if uv is not None:
-            update_mask(mask, self._get_traj_mask_uv(*uv))
         if z is not None:
             update_mask(mask, self._get_traj_mask_z(*z))
+        if uv is not None:
+            update_mask(mask, self._get_traj_mask_uv(*uv))
         return mask
 
     # Note: Typing return array as npt.NDArray[np.float_] leads to overload error
