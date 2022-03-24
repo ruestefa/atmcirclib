@@ -113,6 +113,7 @@ def unrotate_coords(
     transpose: bool = False,
 ) -> tuple[npt.NDArray[np.float_], npt.NDArray[np.float_]]:
     """Turn 1D rotated lon/lat coordinates into 2D regular lon/lat arrays."""
+    # pylint: disable=E0110  # abstract-class-instantiated (RotatedPole, PlateCarree)
     proj_rot = ccrs.RotatedPole(pole_longitude=pole_rlon, pole_latitude=pole_rlat)
     proj_geo = ccrs.PlateCarree()
     rlon2d, rlat2d = np.meshgrid(rlon, rlat)
