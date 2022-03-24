@@ -1,4 +1,4 @@
-"""COSMO outout files."""
+"""COSMO output files."""
 from __future__ import annotations
 
 # Standard library
