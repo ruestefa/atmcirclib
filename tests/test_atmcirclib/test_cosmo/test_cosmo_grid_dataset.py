@@ -1,6 +1,9 @@
 """Test class ``COSMOGridDataset``."""
 from __future__ import annotations
 
+# Standard library
+from typing import cast
+
 # Third-party
 import numpy as np
 import numpy.typing as npt
@@ -9,8 +12,21 @@ import xarray as xr
 # First-party
 from atmcirclib.geo import unrotate_coords
 
+# pylint: disable=R0201  # no-self-use
 
-def create_grid_xr_dataset() -> xr.Dataset:
+# mypy 0.941 thinks arange returns array of type signed integer (numpy 1.33.2)
+RLON: npt.NDArray[np.float_] = cast(npt.NDArray[np.float32], np.arange(-10.0, 5.1, 1.0))
+RLAT: npt.NDArray[np.float_] = cast(npt.NDArray[np.float32], np.arange(-5.0, 4.1, 1.0))
+POLE_RLON: float = 178.0
+POLE_RLAT: float = 30.0
+
+
+def create_grid_xr_dataset(
+    rlon: npt.NDArray[np.float_] = RLON,
+    rlat: npt.NDArray[np.float_] = RLAT,
+    pole_rlon: float = POLE_RLON,
+    pole_rlat: float = POLE_RLAT,
+) -> xr.Dataset:
     """Create a mock xarray dataset representing a COSMO file with grids."""
 
     def create_coord_time() -> xr.DataArray:
@@ -35,12 +51,11 @@ def create_grid_xr_dataset() -> xr.Dataset:
     def create_coord_rlon() -> xr.DataArray:
         """Create coordinate variable ``rlon``."""
         name = "rlon"
-        data = np.arange(-10.0, 5.1, 1.0)
         return xr.DataArray(
             name=name,
-            data=data,
+            data=rlon,
             dims=(name,),
-            coords={name: data},
+            coords={name: rlon},
             attrs={
                 "standard_name": "grid_longitude",
                 "long_name": "rotated_longitude",
@@ -51,12 +66,11 @@ def create_grid_xr_dataset() -> xr.Dataset:
     def create_coord_rlat() -> xr.DataArray:
         """Create coordinate variable ``rlat``."""
         name = "rlat"
-        data = np.arange(-6.0, 6.1, 1.0)
         return xr.DataArray(
             name=name,
-            data=data,
+            data=rlat,
             dims=(name,),
-            coords={name: data},
+            coords={name: rlat},
             attrs={
                 "standard_name": "grid_latitude",
                 "long_name": "rotated_latitude",
@@ -117,8 +131,8 @@ def create_grid_xr_dataset() -> xr.Dataset:
             attrs={
                 "long_name": "coordinates of the rotated North Pole",
                 "grid_mapping_name": "rotated_latitude_latitude",
-                "grid_north_pole_latitude": 30.0,
-                "grid_north_pole_longitude": 178.0,
+                "grid_north_pole_latitude": pole_rlat,
+                "grid_north_pole_longitude": pole_rlon,
             },
         )
 
