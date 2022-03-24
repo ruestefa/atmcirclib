@@ -10,6 +10,7 @@ import numpy.typing as npt
 import xarray as xr
 
 # First-party
+from atmcirclib.cosmo import COSMOGridDataset
 from atmcirclib.geo import unrotate_coords
 
 # pylint: disable=R0201  # no-self-use
@@ -190,3 +191,42 @@ def create_grid_xr_dataset(
 def test_grid_xr_dataset() -> None:
     """Test initialization of grid xarray test dataset."""
     create_grid_xr_dataset()
+
+
+class Test_GetBbox:
+    """Test methods ``get_bbox_??`` that return the domain's bounding boxes."""
+
+    def test_xy(self) -> None:
+        """Get horizontal (x, y) bounding box."""
+        grid = COSMOGridDataset(create_grid_xr_dataset())
+        bbox = grid.get_bbox_xy()
+        ref = (RLON[0], RLON[-1], RLAT[0], RLAT[-1])
+        assert bbox == ref
+
+    def test_xz(self) -> None:
+        """Get vertical (x, z) bounding box."""
+        grid = COSMOGridDataset(create_grid_xr_dataset())
+        bbox = grid.get_bbox_xz()
+        ref = (RLON[0], RLON[-1], 0.0, HEIGHT_TOA_M)
+        assert bbox == ref
+
+    def test_xz_km(self) -> None:
+        """Get vertical (x, z) bounding box with z in km."""
+        grid = COSMOGridDataset(create_grid_xr_dataset(), z_unit="km")
+        bbox = grid.get_bbox_xz()
+        ref = (RLON[0], RLON[-1], 0.0, HEIGHT_TOA_M / 1000)
+        assert bbox == ref
+
+    def test_yz(self) -> None:
+        """Get vertical (x, z) bounding box."""
+        grid = COSMOGridDataset(create_grid_xr_dataset())
+        bbox = grid.get_bbox_yz()
+        ref = (RLAT[0], RLAT[-1], 0.0, HEIGHT_TOA_M)
+        assert bbox == ref
+
+    def test_yz_km(self) -> None:
+        """Get vertical (x, z) bounding box with z in km."""
+        grid = COSMOGridDataset(create_grid_xr_dataset(), z_unit="km")
+        bbox = grid.get_bbox_yz()
+        ref = (RLAT[0], RLAT[-1], 0.0, HEIGHT_TOA_M / 1000)
+        assert bbox == ref
