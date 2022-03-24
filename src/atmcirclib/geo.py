@@ -108,6 +108,7 @@ class BoundingBox(NamedTuple):
 def unrotate_coords(
     rlon: npt.NDArray[np.float_],
     rlat: npt.NDArray[np.float_],
+    *,
     pole_rlon: Optional[float] = None,
     pole_rlat: Optional[float] = None,
     proj_rot: Optional[ccrs.RotatedPole] = None,

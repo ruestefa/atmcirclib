@@ -5,6 +5,7 @@ from __future__ import annotations
 from typing import cast
 
 # Third-party
+import cartopy.crs as ccrs
 import numpy as np
 import numpy.typing as npt
 import xarray as xr
@@ -230,3 +231,25 @@ class Test_GetBbox:
         bbox = grid.get_bbox_yz()
         ref = (RLAT[0], RLAT[-1], 0.0, HEIGHT_TOA_M / 1000)
         assert bbox == ref
+
+
+class Test_GetProj:
+    """Test method ``get_proj`` that returns the domain's projection."""
+
+    def test_type(self) -> None:
+        """Check the type of the projection object."""
+        grid = COSMOGridDataset(create_grid_xr_dataset())
+        proj = grid.get_proj()
+        assert isinstance(proj, ccrs.RotatedPole)
+
+    def test_transform(self) -> None:
+        """Use the projection to unrotate the rlat/rlon grid arrays."""
+        grid = COSMOGridDataset(create_grid_xr_dataset())
+        lon, lat = unrotate_coords(
+            rlon=grid.ds.rlon.data,
+            rlat=grid.ds.rlat.data,
+            proj_rot=grid.get_proj(),
+            transpose=True,
+        )
+        assert np.allclose(lon, grid.ds.lon.data)
+        assert np.allclose(lat, grid.ds.lat.data)
