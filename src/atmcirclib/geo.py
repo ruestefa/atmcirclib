@@ -108,13 +108,17 @@ class BoundingBox(NamedTuple):
 def unrotate_coords(
     rlon: npt.NDArray[np.float_],
     rlat: npt.NDArray[np.float_],
-    pole_rlon: float,
-    pole_rlat: float,
+    pole_rlon: Optional[float] = None,
+    pole_rlat: Optional[float] = None,
+    proj_rot: Optional[ccrs.RotatedPole] = None,
     transpose: bool = False,
 ) -> tuple[npt.NDArray[np.float_], npt.NDArray[np.float_]]:
     """Turn 1D rotated lon/lat coordinates into 2D regular lon/lat arrays."""
     # pylint: disable=E0110  # abstract-class-instantiated (RotatedPole, PlateCarree)
-    proj_rot = ccrs.RotatedPole(pole_longitude=pole_rlon, pole_latitude=pole_rlat)
+    if proj_rot is None:
+        if pole_rlon is None or pole_rlat is None:
+            raise ValueError("must pass either proj or both pole_rlon and pole_rlat")
+        proj_rot = ccrs.RotatedPole(pole_longitude=pole_rlon, pole_latitude=pole_rlat)
     proj_geo = ccrs.PlateCarree()
     rlon2d, rlat2d = np.meshgrid(rlon, rlat)
     lon, lat, _ = np.transpose(proj_geo.transform_points(proj_rot, rlon2d, rlat2d))
