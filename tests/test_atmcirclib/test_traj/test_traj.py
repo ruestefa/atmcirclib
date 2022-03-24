@@ -1,4 +1,6 @@
 """Test ``atmcirclib.traj``."""
+from __future__ import annotations
+
 # Standard library
 import dataclasses as dc
 from typing import Any
@@ -12,7 +14,7 @@ import pytest
 import xarray as xr
 
 # First-party
-from atmcirclib.traj import COSMOGridDataset
+from atmcirclib.cosmo import COSMOGridDataset
 from atmcirclib.traj import ExtendedTrajDataset  # TODO eliminate
 from atmcirclib.traj import TrajDataset
 from atmcirclib.typing import NDIndex_T
