@@ -13,8 +13,8 @@ import xarray as xr
 
 # First-party
 from atmcirclib.traj import COSMOGridDataset
-from atmcirclib.traj import ExtendedTrajsDataset  # TODO eliminate
-from atmcirclib.traj import TrajsDataset
+from atmcirclib.traj import ExtendedTrajDataset  # TODO eliminate
+from atmcirclib.traj import TrajDataset
 from atmcirclib.typing import NDIndex_T
 
 RAW_COORDS_D: dict[str, list[float]] = {}
@@ -330,19 +330,19 @@ class Test_Init:
         """Initialize without arguments, which should fail."""
         with pytest.raises(TypeError):
             # pylint: disable=E1120  # no-value-for-parameter
-            TrajsDataset()  # type: ignore  # noqa
+            TrajDataset()  # type: ignore  # noqa
 
     def test_ds(self) -> None:
         """Initalize with xarray dataset."""
         ds = create_trajs_xr_dataset()
-        trajs = TrajsDataset(ds)
+        trajs = TrajDataset(ds)
         assert trajs.ds == ds
 
     def test_config(self) -> None:
         """Initialize with changed config parameter."""
         ds = create_trajs_xr_dataset()
-        trajs_ref = TrajsDataset(ds)
-        trajs_exp = TrajsDataset(ds, nan=666)
+        trajs_ref = TrajDataset(ds)
+        trajs_exp = TrajDataset(ds, nan=666)
         assert trajs_ref.config.nan == -999
         assert trajs_exp.config.nan == 666
 
@@ -352,7 +352,7 @@ class Test_GetData:
 
     def test_default(self) -> None:
         """Call with default options, whereby -999 are replaced by nans."""
-        trajs = TrajsDataset(create_trajs_xr_dataset())
+        trajs = TrajDataset(create_trajs_xr_dataset())
         for name, ref in REF_DATA_D.items():
             # Raw field contains -999
             exp = trajs.ds.variables[name].data
@@ -365,7 +365,7 @@ class Test_GetData:
 
     def test_default_explicit(self) -> None:
         """Call with explicit default values."""
-        trajs = TrajsDataset(create_trajs_xr_dataset())
+        trajs = TrajDataset(create_trajs_xr_dataset())
         for name, ref in REF_DATA_D.items():
             ref = trajs.get_data(name)
             exp = trajs.get_data(
@@ -378,7 +378,7 @@ class Test_GetData:
 
     def test_replace_vnan(self) -> None:
         """Don't replace -999 by nans."""
-        trajs = TrajsDataset(create_trajs_xr_dataset())
+        trajs = TrajDataset(create_trajs_xr_dataset())
         for name, ref in REF_DATA_D.items():
             exp = trajs.get_data(name, replace_vnan=False)
             assert np.allclose(exp, ref, equal_nan=True)
@@ -404,7 +404,7 @@ class Test_GetData:
     )
     def test_indexing(self, c: IndexingTestParams) -> None:
         """Get subarrays by indexing."""
-        trajs = TrajsDataset(create_trajs_xr_dataset())
+        trajs = TrajDataset(create_trajs_xr_dataset())
         idcs: dict[str, NDIndex_T] = {}
         if c.idx_time is None:
             c.idx_time = slice(None)
@@ -425,17 +425,17 @@ class Test_Count:
 
     def test_incomplete(self) -> None:
         """Count trajs that leave the domain."""
-        # TODO Replace ExtendedTrajsDataset by TrajsDataset
-        trajs = ExtendedTrajsDataset(create_trajs_xr_dataset())
+        # TODO Replace ExtendedTrajDataset by TrajDataset
+        trajs = ExtendedTrajDataset(create_trajs_xr_dataset())
         assert trajs.count(incomplete=True) == 1
         assert trajs.count(incomplete=False) == 4
 
     # Temporary test to be used to reimplement selection of boundary trajs
-    # (pull domain info, incl. boundary zone coords, out of TrajsDataset)
+    # (pull domain info, incl. boundary zone coords, out of TrajDataset)
     def test_boundary(self) -> None:
         """Count trajs that reach the boundary zone."""
-        # TODO Replace ExtendedTrajsDataset by TrajsDataset
-        trajs = ExtendedTrajsDataset(
+        # TODO Replace ExtendedTrajDataset by TrajDataset
+        trajs = ExtendedTrajDataset(
             create_trajs_xr_dataset(),
             _grid=COSMOGridDataset.from_file("data/online/lfff00000000.nc"),
             boundary_size_deg=4,

@@ -22,7 +22,7 @@ from atmcirclib.typing import NDIndex_T
 from atmcirclib.typing import PathLike_T
 
 
-class TrajsDataset:
+class TrajDataset:
     """A trajectories dataset as written by COSMO online trajs module."""
 
     @dc.dataclass
@@ -44,7 +44,7 @@ class TrajsDataset:
 
     def __init__(self, ds: xr.Dataset, **config_kwargs: Any) -> None:
         """Create a new instance."""
-        self.config: TrajsDataset.Config = self.Config(**config_kwargs)
+        self.config: TrajDataset.Config = self.Config(**config_kwargs)
         self.ds: xr.Dataset = ds
 
     def get_data(
@@ -67,7 +67,7 @@ class TrajsDataset:
         return arr
 
     @classmethod
-    def from_file(cls, path: PathLike_T, **config_kwargs: Any) -> TrajsDataset:
+    def from_file(cls, path: PathLike_T, **config_kwargs: Any) -> TrajDataset:
         """Read trajs dataset from file."""
         try:
             # ds = xr.open_dataset(path, engine="netcdf4")
@@ -78,16 +78,16 @@ class TrajsDataset:
 
 
 # pylint: disable=R0904  # too-many-public-methods (>20)
-class ExtendedTrajsDataset(TrajsDataset):
-    """A temporary extension of ``TrajsDataset`` with additional methods.
+class ExtendedTrajDataset(TrajDataset):
+    """A temporary extension of ``TrajDataset`` with additional methods.
 
     These methods are untested and might be moved to other classes eventually.
-    Only the interface of ``TrajsDataset`` can be considered stable!
+    Only the interface of ``TrajDataset`` can be considered stable!
 
     """
 
     @dc.dataclass
-    class Config(TrajsDataset.Config):
+    class Config(TrajDataset.Config):
         """Configuration.
 
         Properties:
@@ -113,11 +113,11 @@ class ExtendedTrajsDataset(TrajsDataset):
         **config_kwargs: Any,
     ) -> None:
         """Create a new instance."""
-        self.config: ExtendedTrajsDataset.Config
+        self.config: ExtendedTrajDataset.Config
         super().__init__(ds, **config_kwargs)
         self._grid: Optional[COSMOGridDataset] = _grid
 
-    def only(self, **criteria: Any) -> TrajsDataset:
+    def only(self, **criteria: Any) -> TrajDataset:
         """Return a copy with only those trajs that fulfill the given criteria.
 
         See docstring of ``get_traj_mask`` for details on the criteria.
@@ -126,7 +126,7 @@ class ExtendedTrajsDataset(TrajsDataset):
         mask = self.get_traj_mask(**criteria)
         return self._without_masked(~mask)
 
-    def without(self, **criteria: Any) -> TrajsDataset:
+    def without(self, **criteria: Any) -> TrajDataset:
         """Return a copy without those trajs that fulfill the given criteria.
 
         See docstring of ``get_traj_mask`` for details on the criteria.
@@ -355,7 +355,7 @@ class ExtendedTrajsDataset(TrajsDataset):
         """Format the last time step in the file, optionally as a string."""
         return self.format_abs_time(idcs=[-1])[0]
 
-    def _without_masked(self, mask: npt.NDArray[np.bool_]) -> TrajsDataset:
+    def _without_masked(self, mask: npt.NDArray[np.bool_]) -> TrajDataset:
         """Return a copy without those trajs indicated in the mask."""
         new_data_vars: dict[str, xr.DataArray] = {}
         for name, var in self.ds.data_vars.items():
