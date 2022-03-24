@@ -19,6 +19,7 @@ RLON: npt.NDArray[np.float_] = cast(npt.NDArray[np.float32], np.arange(-10.0, 5.
 RLAT: npt.NDArray[np.float_] = cast(npt.NDArray[np.float32], np.arange(-5.0, 4.1, 1.0))
 POLE_RLON: float = 178.0
 POLE_RLAT: float = 30.0
+HEIGHT_TOA_M: float = 22_000.0
 
 
 def create_grid_xr_dataset(
@@ -26,6 +27,7 @@ def create_grid_xr_dataset(
     rlat: npt.NDArray[np.float_] = RLAT,
     pole_rlon: float = POLE_RLON,
     pole_rlat: float = POLE_RLAT,
+    height_toa_m: float = HEIGHT_TOA_M,
 ) -> xr.Dataset:
     """Create a mock xarray dataset representing a COSMO file with grids."""
 
@@ -146,6 +148,20 @@ def create_grid_xr_dataset(
             attrs={"long_name": "time bounds"},
         )
 
+    def create_height_toa() -> xr.DataArray:
+        """Create regular variable ``height_toa``."""
+        return xr.DataArray(
+            name="height_toa",
+            data=np.array(height_toa_m, np.float32),
+            attrs={
+                "standard_name": "height",
+                "long_name": "height of top of model",
+                "units": "m",
+                "axis": "Z",
+                "positive": "up",
+            },
+        )
+
     coords: dict[str, xr.DataArray] = {}
     data_vars: dict[str, xr.DataArray] = {}
 
@@ -156,6 +172,7 @@ def create_grid_xr_dataset(
 
     data_vars["rotated_pole"] = create_rotated_pole()
     data_vars["time_bnds"] = create_time_bnds()
+    data_vars["height_toa"] = create_height_toa()
 
     attrs = {
         "Conventions": "CF-1.4",
