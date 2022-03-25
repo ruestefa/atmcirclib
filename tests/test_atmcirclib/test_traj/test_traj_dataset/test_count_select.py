@@ -4,6 +4,7 @@ from __future__ import annotations
 # Standard library
 import dataclasses as dc
 from typing import Any
+from typing import cast
 from typing import Optional
 
 # Third-party
@@ -12,8 +13,8 @@ import numpy.typing as npt
 import pytest
 
 # First-party
-from atmcirclib.traj import TrajDataset
-from atmcirclib.typing import NDIndex_T
+from atmcirclib.cosmo import COSMOGridDataset
+from atmcirclib.traj import ExtendedTrajDataset  # TODO replace by TrajDataset
 
 # Local
 from .shared import TrajsXrDatasetFactory
@@ -238,126 +239,64 @@ REF_DATA_D = trajs_ds_factory.ref_data_d
 REF_COORDS_D = trajs_ds_factory.ref_coords_d
 
 
-class Test_TestData:
-    """Test test data."""
+class Test_Count:
+    """Count trajs that meet given criteria."""
 
-    def test_create_trajs_xr_dataset(self) -> None:
-        """Test creation of a mock trajs dataset."""
-        ds = trajs_ds_factory()
-        assert ds.attrs == ATTRS
-        # Check time coordinate
-        assert set(dict(ds.coords)) == {"time"}
-        assert ds.coords["time"].attrs == ATTRS_D["time"]
-        assert (ds.coords["time"].data.astype(int) == REF_COORDS_D["time"]).all()
-        # Check variables
-        assert set(dict(ds.variables).keys()) == set(REF_DATA_D) | set(REF_COORDS_D)
-        for name, data in REF_DATA_D.items():
-            assert ds.variables[name].attrs == ATTRS_D[name]
-            assert np.allclose(ds.variables[name].data, data)
+    def test_incomplete(self) -> None:
+        """Count trajs that leave the domain."""
+        # TODO Replace ExtendedTrajDataset by TrajDataset
+        trajs = ExtendedTrajDataset(trajs_ds_factory())
+        assert trajs.count(incomplete=True) == 1
+        assert trajs.count(incomplete=False) == 4
 
-    def test_ref_data(self) -> None:
-        """Make sure dataset contains copies of ref array."""
-        name = "z"
-        ds = trajs_ds_factory()
-        assert np.allclose(ds.variables[name].data, REF_DATA_D[name].data)
-        mask = ds.variables[name].data > 3000
-        assert mask.sum() > 0
-        ds.variables[name].data[mask] += 100
-        assert not np.allclose(ds.variables[name].data, REF_DATA_D[name].data)
-
-
-class Test_Init:
-    """Test initialization."""
-
-    def test_fail(self) -> None:
-        """Initialize without arguments, which should fail."""
-        with pytest.raises(TypeError):
-            # pylint: disable=E1120  # no-value-for-parameter
-            TrajDataset()  # type: ignore  # noqa
-
-    def test_ds(self) -> None:
-        """Initalize with xarray dataset."""
-        ds = trajs_ds_factory()
-        trajs = TrajDataset(ds)
-        assert trajs.ds == ds
-
-    def test_config(self) -> None:
-        """Initialize with changed config parameter."""
-        ds = trajs_ds_factory()
-        trajs_ref = TrajDataset(ds)
-        trajs_exp = TrajDataset(ds, nan=666)
-        assert trajs_ref.config.nan == -999
-        assert trajs_exp.config.nan == 666
-
-
-class Test_GetData:
-    """Test method ``get_data``."""
-
-    def test_default(self) -> None:
-        """Call with default options, whereby -999 are replaced by nans."""
-        trajs = TrajDataset(trajs_ds_factory())
-        for name, ref in REF_DATA_D.items():
-            # Raw field contains -999
-            exp = trajs.ds.variables[name].data
-            assert np.allclose(exp, ref)
-            # -999 replaced by nans by default
-            exp = trajs.get_data(name)
-            assert not np.allclose(exp, ref, equal_nan=True)
-            ref = np.where(ref == VNAN, np.nan, ref)
-            assert np.allclose(exp, ref, equal_nan=True)
-
-    def test_default_explicit(self) -> None:
-        """Call with explicit default values."""
-        trajs = TrajDataset(trajs_ds_factory())
-        for name, ref in REF_DATA_D.items():
-            ref = trajs.get_data(name)
-            exp = trajs.get_data(
-                name=name,
-                idx_time=slice(None),
-                idx_traj=slice(None),
-                replace_vnan=True,
-            )
-            assert np.allclose(ref, exp, equal_nan=True)
-
-    def test_replace_vnan(self) -> None:
-        """Don't replace -999 by nans."""
-        trajs = TrajDataset(trajs_ds_factory())
-        for name, ref in REF_DATA_D.items():
-            exp = trajs.get_data(name, replace_vnan=False)
-            assert np.allclose(exp, ref, equal_nan=True)
+    # Temporary test to be used to reimplement selection of boundary trajs
+    # (pull domain info, incl. boundary zone coords, out of TrajDataset)
+    def test_boundary(self) -> None:
+        """Count trajs that reach the boundary zone."""
+        # TODO Replace ExtendedTrajDataset by TrajDataset
+        trajs = ExtendedTrajDataset(
+            trajs_ds_factory(),
+            _grid=COSMOGridDataset.from_file("data/online/lfff00000000.nc"),
+            boundary_size_deg=4,
+        )
+        assert trajs.count(boundary=True) == 2
 
     @dc.dataclass
-    class IndexingTestParams:
-        """Parameters passed to ``test_indexing``."""
+    class _TestCountConfig:
+        """Configuration of ``test_z``."""
 
-        idx_time: Optional[NDIndex_T] = None
-        idx_traj: Optional[NDIndex_T] = None
+        incomplete: Optional[bool] = None
+        boundary: Optional[bool] = None
+        lon: Optional[tuple[int, Optional[float], Optional[float]]] = None
+        lat: Optional[tuple[int, Optional[float], Optional[float]]] = None
+        z: Optional[tuple[int, Optional[float], Optional[float]]] = None
+        uv: Optional[tuple[int, Optional[float], Optional[float]]] = None
+        require_all: bool = True
+        n: int = -1
 
     @pytest.mark.parametrize(
-        "c",
+        "cf",
         [
-            IndexingTestParams(None, None),
-            IndexingTestParams(0, slice(None)),
-            IndexingTestParams(None, -1),
-            IndexingTestParams(3, 4),
-            IndexingTestParams((2, 3), 0),
-            IndexingTestParams(None, slice(None, None, 3)),
-            IndexingTestParams(slice(4, -1, 3), slice(None, None, -1)),
+            _TestCountConfig(n=4),
+            _TestCountConfig(z=(0, 3000, None), n=3),
+            _TestCountConfig(z=(6, None, 10000), n=3),
+            _TestCountConfig(z=(-3, 9000, 10000), n=1),
         ],
     )
-    def test_indexing(self, c: IndexingTestParams) -> None:
-        """Get subarrays by indexing."""
-        trajs = TrajDataset(trajs_ds_factory())
-        idcs: dict[str, NDIndex_T] = {}
-        if c.idx_time is None:
-            c.idx_time = slice(None)
-        else:
-            idcs["idx_time"] = c.idx_time
-        if c.idx_traj is None:
-            c.idx_traj = slice(None)
-        else:
-            idcs["idx_traj"] = c.idx_traj
-        for name, ref in REF_DATA_D.items():
-            exp = trajs.get_data(name, replace_vnan=False, **idcs)
-            ref = ref[c.idx_time, c.idx_traj]
-            assert np.allclose(exp, ref)
+    def test_complete(self, cf: _TestCountConfig) -> None:
+        """Count only complete trajs trajs that meet the given criteria."""
+        # TODO Replace ExtendedTrajDataset by TrajDataset
+        trajs = cast(
+            ExtendedTrajDataset,
+            ExtendedTrajDataset(trajs_ds_factory()).select(incomplete=False),
+        )
+        n = trajs.count(
+            incomplete=cf.incomplete,
+            boundary=cf.boundary,
+            lon=cf.lon,
+            lat=cf.lat,
+            z=cf.z,
+            uv=cf.uv,
+            require_all=cf.require_all,
+        )
+        assert n == cf.n
