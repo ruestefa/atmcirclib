@@ -290,12 +290,10 @@ class Test_Count:
     def test_boundary(self) -> None:
         """Count trajs that reach the boundary zone."""
         # TODO Replace ExtendedTrajDataset by TrajDataset
-        trajs = ExtendedTrajDataset(
-            trajs_ds_factory.run(),
-            _grid=GRID_DS,
-            boundary_size_deg=1,
+        trajs = ExtendedTrajDataset(trajs_ds_factory.run())
+        n_boundary = trajs.count(
+            [dict(type_="boundary", value=True, grid=GRID_DS, size_deg=1)]
         )
-        n_boundary = trajs.count([dict(type_="boundary", value=True)])
         assert n_boundary == 4
 
     @dc.dataclass

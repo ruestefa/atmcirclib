@@ -115,8 +115,6 @@ class ExtendedTrajDataset(TrajDataset):
 
         Properties:
 
-            boundary_size_deg: Size of the domain boundary zone in degrees.
-
             start_file: Path to text file with start points; required to provide
                 start points, e.g., to a plotting routine to choose proper bins.
 
@@ -124,21 +122,17 @@ class ExtendedTrajDataset(TrajDataset):
 
         """
 
-        boundary_size_deg: float = 1.0  # TODO eliminate
         start_file: Optional[PathLike_T] = None
         start_file_header: int = 3
 
     def __init__(
         self,
         ds: xr.Dataset,
-        *,
-        _grid: Optional[COSMOGridDataset] = None,  # TODO remove
         **config_kwargs: Any,
     ) -> None:
         """Create a new instance."""
         self.config: ExtendedTrajDataset.Config
         super().__init__(ds, **config_kwargs)
-        self._grid: Optional[COSMOGridDataset] = _grid
 
     def select(
         self, criteria: Optional[Criteria_T] = None, **addtl_criteria: Any
@@ -233,7 +227,12 @@ class ExtendedTrajDataset(TrajDataset):
                 update_mask(mask, incr if criterion["value"] else ~incr)
             elif criterion["type_"] == "boundary":
                 assert "value" in criterion, str(criterion)  # TMP
-                incr = self._get_traj_mask_any_boundary()
+                assert "grid" in criterion, str(criterion)  # TMP
+                assert "size_deg" in criterion, str(criterion)  # TMP
+                grid = criterion["grid"]
+                assert isinstance(grid, COSMOGridDataset), type(grid).__name__  # TMP
+                size_deg = criterion["size_deg"]
+                incr = self._get_traj_mask_any_boundary(grid, float(size_deg))
                 update_mask(mask, incr if criterion["value"] else ~incr)
             elif criterion["type_"] == "variable":
                 assert "variable" in criterion, str(criterion)  # TMP
@@ -244,14 +243,8 @@ class ExtendedTrajDataset(TrajDataset):
                 time_idx = criterion["time_idx"]
                 vmin = criterion["vmin"]
                 vmax = criterion["vmax"]
-                if variable == "z":
-                    arr = self.get_data("z", idx_time=time_idx)
-                    update_mask(mask, self._get_traj_mask_in_range(arr, vmin, vmax))
-                elif variable == "UV":
-                    arr = self.get_data("UV", idx_time=time_idx)
-                    update_mask(mask, self._get_traj_mask_in_range(arr, vmin, vmax))
-                else:
-                    raise ValueError(f"invalid variable '{criterion['variable']}'")
+                arr = self.get_data(variable, idx_time=time_idx)
+                update_mask(mask, self._get_traj_mask_in_range(arr, vmin, vmax))
             else:
                 raise ValueError(f"invalid criterion type '{criterion['type_']}'")
         return mask
@@ -430,7 +423,7 @@ class ExtendedTrajDataset(TrajDataset):
         new_ds = xr.Dataset(
             data_vars=new_data_vars, coords=self.ds.coords, attrs=self.ds.attrs
         )
-        return type(self)(ds=new_ds, _grid=self._grid, **dc.asdict(self.config))
+        return type(self)(ds=new_ds, **dc.asdict(self.config))
 
     def _get_traj_mask_full(self, value: bool) -> npt.NDArray[np.bool_]:
         """Get a trajs mask."""
@@ -442,13 +435,11 @@ class ExtendedTrajDataset(TrajDataset):
         # mypy thinks return type is Any (mypy v0.941, numpy v1.22.3)
         return cast(npt.NDArray[np.bool_], mask)
 
-    def _get_traj_mask_any_boundary(self) -> npt.NDArray[np.bool_]:
+    def _get_traj_mask_any_boundary(
+        self, grid: COSMOGridDataset, size_deg: float
+    ) -> npt.NDArray[np.bool_]:
         """Get 1D mask indicating all trajs ever reaching the boundary zone."""
-        if self._grid is None:
-            raise Exception("must pass _grid to identify boundary trajs")
-        llrlon, urrlon, llrlat, urrlat = self._grid.get_bbox_xy().shrink(
-            self.config.boundary_size_deg
-        )
+        llrlon, urrlon, llrlat, urrlat = grid.get_bbox_xy().shrink(size_deg)
         rlon, rlat = self.ds.longitude.data, self.ds.latitude.data
         nan_mask = self._get_traj_mask_any_incomplete()
         rlon_mask = np.where(nan_mask, True, (rlon < llrlon) | (rlon > urrlon))
