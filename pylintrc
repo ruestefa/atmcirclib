@@ -8,6 +8,7 @@ disable =
     C0115, # ???: Missing class docstring
     C0116, # ???: Missing function or method docstring
     C0330, # ???: Wrong hanging indentation before block (add 4 spaces)
+    R0801, # duplicate-code
     R0903, # too-few-public-methods (<2)
     # R0801, # duplicate-code: Similar lines in 2 files
     # -> see https://github.com/PyCQA/pylint/issues/214
