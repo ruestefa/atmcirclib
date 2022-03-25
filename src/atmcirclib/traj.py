@@ -4,6 +4,7 @@ from __future__ import annotations
 # Standard library
 import dataclasses as dc
 import datetime as dt
+from collections.abc import Collection
 from collections.abc import Sequence
 from typing import Any
 from typing import cast
@@ -19,6 +20,10 @@ import xarray as xr
 from atmcirclib.cosmo import COSMOGridDataset
 from atmcirclib.typing import NDIndex_T
 from atmcirclib.typing import PathLike_T
+
+# Custom types
+Criterion_T = dict[str, Any]
+Criteria_T = Collection[Criterion_T]
 
 
 class TrajDataset:
@@ -135,55 +140,64 @@ class ExtendedTrajDataset(TrajDataset):
         super().__init__(ds, **config_kwargs)
         self._grid: Optional[COSMOGridDataset] = _grid
 
-    def select(self, **criteria: Any) -> TrajDataset:
+    def select(
+        self, criteria: Optional[Criteria_T] = None, **addtl_criteria: Any
+    ) -> TrajDataset:
         """Return a copy with only those trajs that fulfill the given criteria.
 
         See docstring of ``get_traj_mask`` for details on the criteria.
 
         """
-        mask = self.get_traj_mask(**criteria)
+        mask = self.get_traj_mask(criteria, **addtl_criteria)
         return self._without_masked(~mask)
 
-    def remove(self, **criteria: Any) -> TrajDataset:
+    def remove(
+        self, criteria: Optional[Criteria_T] = None, **addtl_criteria: Any
+    ) -> TrajDataset:
         """Return a copy without those trajs that fulfill the given criteria.
 
         See docstring of ``get_traj_mask`` for details on the criteria.
 
         """
-        mask = self.get_traj_mask(**criteria)
+        mask = self.get_traj_mask(criteria, **addtl_criteria)
         return self._without_masked(mask)
 
-    def count(self, **criteria: Any) -> int:
+    def count(
+        self, criteria: Optional[Criteria_T] = None, **addtl_criteria: Any
+    ) -> int:
         """Count all trajs that fulfill the given criteria.
 
         See docstring of ``get_traj_mask`` for details on the criteria.
 
         """
         # mypy thinks return type is Any (mypy v0.941, numpy v1.22.3)
-        return cast(int, self.get_traj_mask(**criteria).sum())
+        return cast(int, self.get_traj_mask(criteria, **addtl_criteria).sum())
 
-    def discount(self, **criteria: Any) -> int:
+    def discount(
+        self, criteria: Optional[Criteria_T] = None, **addtl_criteria: Any
+    ) -> int:
         """Count all trajs that don't fulfill the given criteria.
 
         See docstring of ``get_traj_mask`` for details on the criteria.
 
         """
-        return self.count() - self.count(**criteria)
+        return self.count() - self.count(criteria, **addtl_criteria)
 
     def get_traj_mask(
         self,
+        criteria: Optional[Criteria_T] = None,
         *,
-        incomplete: Optional[bool] = None,
-        boundary: Optional[bool] = None,
-        lon: Optional[tuple[int, Optional[float], Optional[float]]] = None,
-        lat: Optional[tuple[int, Optional[float], Optional[float]]] = None,
-        z: Optional[tuple[int, Optional[float], Optional[float]]] = None,
-        uv: Optional[tuple[int, Optional[float], Optional[float]]] = None,
         require_all: bool = True,
     ) -> npt.NDArray[np.bool_]:
         """Get a mask indicating which trajs fulfill a combination of criteria.
 
         Args:
+            criteria (optional): A set of critiera dicts (see below).
+
+            require_all (optional): Only select trajs that fulfil all given
+                criteria; otherwise, any one given criterion is sufficient.
+
+        Criteria:
             incomplete (optional): Select trajs that are incomplete because they
                 contain missing values, which is the case when they leave the
                 domain; note that these are necessary a subset of those selected
@@ -192,20 +206,11 @@ class ExtendedTrajDataset(TrajDataset):
             boundary (optional): Select trajs that enter the boundary zone
                 (defined by ``Config.boundary_size_km``) at some point.
 
-            lon (optional): Select trajs that at a given time step are located
-                in a given longitude range.
-
-            lat (optional): Select trajs that at a given time step are located
-                in a given latitude range.
-
             z (optional): Select trajs that at a given time step are located in
                 a given height range.
 
-            uv (optional): Select trajs that at a given time step exhibit wind
+            UV (optional): Select trajs that at a given time step exhibit wind
                 speed in a given range.
-
-            require_all (optional): Only select trajs that fulfil all given
-                criteria; otherwise, any one given criterion is sufficient.
 
         """
 
@@ -219,18 +224,36 @@ class ExtendedTrajDataset(TrajDataset):
                 mask[:] |= incr
 
         mask = self._get_traj_mask_full(require_all)
-        if incomplete is not None:
-            incr = self._get_traj_mask_any_incomplete()
-            update_mask(mask, incr if incomplete else ~incr)
-        if boundary is not None:
-            incr = self._get_traj_mask_any_boundary()
-            update_mask(mask, incr if boundary else ~incr)
-        if z is not None:
-            arr = self.get_data("z", idx_time=z[0])
-            update_mask(mask, self._get_traj_mask_in_range(arr, z[1], z[2]))
-        if uv is not None:
-            arr = self.get_data("UV", idx_time=uv[0])
-            update_mask(mask, self._get_traj_mask_in_range(arr, uv[1], uv[2]))
+        criterion: Criterion_T
+        for criterion in criteria or []:
+            assert "type_" in criterion, str(criterion)  # TMP
+            if criterion["type_"] == "incomplete":
+                assert "value" in criterion, str(criterion)
+                incr = self._get_traj_mask_any_incomplete()
+                update_mask(mask, incr if criterion["value"] else ~incr)
+            elif criterion["type_"] == "boundary":
+                assert "value" in criterion, str(criterion)  # TMP
+                incr = self._get_traj_mask_any_boundary()
+                update_mask(mask, incr if criterion["value"] else ~incr)
+            elif criterion["type_"] == "variable":
+                assert "variable" in criterion, str(criterion)  # TMP
+                assert "time_idx" in criterion, str(criterion)  # TMP
+                assert "vmin" in criterion, str(criterion)  # TMP
+                assert "vmax" in criterion, str(criterion)  # TMP
+                variable = criterion["variable"]
+                time_idx = criterion["time_idx"]
+                vmin = criterion["vmin"]
+                vmax = criterion["vmax"]
+                if variable == "z":
+                    arr = self.get_data("z", idx_time=time_idx)
+                    update_mask(mask, self._get_traj_mask_in_range(arr, vmin, vmax))
+                elif variable == "UV":
+                    arr = self.get_data("UV", idx_time=time_idx)
+                    update_mask(mask, self._get_traj_mask_in_range(arr, vmin, vmax))
+                else:
+                    raise ValueError(f"invalid variable '{criterion['variable']}'")
+            else:
+                raise ValueError(f"invalid criterion type '{criterion['type_']}'")
         return mask
 
     # Note: Typing return array as npt.NDArray[np.float_] leads to overload error
@@ -439,7 +462,7 @@ class ExtendedTrajDataset(TrajDataset):
     ) -> npt.NDArray[np.bool_]:
         """Get a task indicating trajs with a values of ``arr`` in range."""
         _name_ = "_get_traj_mask_in_range"
-        if n_incomplete := self.count(incomplete=True):
+        if n_incomplete := self.count([dict(type_="incomplete", value=True)]):
             raise NotImplementedError(
                 f"{type(self).__name__}.{_name_} for incomplete trajs"
                 f" ({n_incomplete:,}/{self.count():,})"

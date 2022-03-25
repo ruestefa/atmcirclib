@@ -3,9 +3,9 @@ from __future__ import annotations
 
 # Standard library
 import dataclasses as dc
+from collections.abc import Collection
 from typing import Any
 from typing import cast
-from typing import Optional
 
 # Third-party
 import numpy as np
@@ -163,6 +163,18 @@ RAW_DATA_D[_name] = [
     [+175.0, -5.500, -999.0, -999.0, -55.00, -22.00],
 ]
 
+# UV:
+#   [ 113.3,   24.5,   56.0,   12.2,   12.2,   56.0],
+#   [ 100.1,   16.0,   56.0,   12.2,   12.2,   56.0],
+#   [  80.1,   22.1,   56.0,   15.5,   15.5,   83.2],
+#   [  68.7,   27.5,   56.0,   27.5,   19.8,  110.5],
+#   [  86.9,   30.7,   56.0,   35.2,   31.1,   96.8],
+#   [ 113.3,   27.0,   56.0,   43.4,   45.1,   70.1],
+#   [ 110.8,   25.9,    nan,   47.3,   45.7,   45.5],
+#   [ 137.5,   24.9,    nan,   56.4,   47.3,   68.9],
+#   [ 165.0,   24.9,    nan,   73.9,   64.4,   49.5],
+#   [ 175.0,   28.0,    nan,    nan,   77.7,   35.2],
+
 _name = "W"
 ATTRS_D[_name] = {
     "standard_name": "upward_air_velocity",
@@ -257,7 +269,7 @@ class Test_GetData:
         uv = trajs.get_data("UV")
         u_ref = np.where(REF_DATA_D["U"] == VNAN, np.nan, REF_DATA_D["U"])
         v_ref = np.where(REF_DATA_D["V"] == VNAN, np.nan, REF_DATA_D["V"])
-        uv_ref = np.sqrt(u_ref ** 2 + v_ref ** 2)
+        uv_ref = np.sqrt(u_ref**2 + v_ref**2)
         assert np.allclose(uv, uv_ref, equal_nan=True)
 
 
@@ -268,8 +280,8 @@ class Test_Count:
         """Count trajs that leave the domain."""
         # TODO Replace ExtendedTrajDataset by TrajDataset
         trajs = ExtendedTrajDataset(trajs_ds_factory.run())
-        n_incomplete = trajs.count(incomplete=True)
-        n_complete = trajs.count(incomplete=False)
+        n_incomplete = trajs.count([dict(type_="incomplete", value=True)])
+        n_complete = trajs.count([dict(type_="incomplete", value=False)])
         assert n_incomplete == 2
         assert n_complete == 4
 
@@ -283,29 +295,123 @@ class Test_Count:
             _grid=GRID_DS,
             boundary_size_deg=1,
         )
-        n_boundary = trajs.count(boundary=True)
+        n_boundary = trajs.count([dict(type_="boundary", value=True)])
         assert n_boundary == 4
 
     @dc.dataclass
     class _TestCountConfig:
         """Configuration of ``test_z``."""
 
-        incomplete: Optional[bool] = None
-        boundary: Optional[bool] = None
-        lon: Optional[tuple[int, Optional[float], Optional[float]]] = None
-        lat: Optional[tuple[int, Optional[float], Optional[float]]] = None
-        z: Optional[tuple[int, Optional[float], Optional[float]]] = None
-        uv: Optional[tuple[int, Optional[float], Optional[float]]] = None
+        criteria: Collection[dict[str, Any]]
         require_all: bool = True
         n: int = -1
 
     @pytest.mark.parametrize(
         "cf",
         [
-            _TestCountConfig(n=4),
-            _TestCountConfig(z=(0, 3000, None), n=2),
-            _TestCountConfig(z=(6, None, 9000), n=3),
-            _TestCountConfig(z=(-3, 7500, 85000), n=2),
+            _TestCountConfig(  # cf[0]
+                criteria=[],
+                n=4,
+            ),
+            _TestCountConfig(  # cf[1]
+                criteria=[
+                    dict(
+                        type_="variable",
+                        variable="z",
+                        time_idx=0,
+                        vmin=3000,
+                        vmax=None,
+                    ),
+                ],
+                n=2,
+            ),
+            _TestCountConfig(  # cf[2]
+                criteria=[
+                    dict(
+                        type_="variable",
+                        variable="z",
+                        time_idx=6,
+                        vmin=None,
+                        vmax=9000,
+                    ),
+                ],
+                n=3,
+            ),
+            _TestCountConfig(  # cf[3]
+                criteria=[
+                    dict(
+                        type_="variable",
+                        variable="z",
+                        time_idx=-3,
+                        vmin=7500,
+                        vmax=85000,
+                    ),
+                ],
+                n=2,
+            ),
+            _TestCountConfig(  # cf[4]
+                criteria=[
+                    dict(
+                        type_="variable",
+                        variable="UV",
+                        time_idx=5,
+                        vmin=100,
+                        vmax=None,
+                    ),
+                ],
+                n=1,
+            ),
+            _TestCountConfig(  # cf[5]
+                criteria=[
+                    dict(
+                        type_="variable",
+                        variable="UV",
+                        time_idx=3,
+                        vmin=20,
+                        vmax=70,
+                    ),
+                ],
+                n=2,
+            ),
+            _TestCountConfig(  # cf[6]
+                criteria=[
+                    dict(
+                        type_="variable",
+                        variable="z",
+                        time_idx=-1,
+                        vmin=8000,
+                        vmax=None,
+                    ),
+                    dict(
+                        type_="variable",
+                        variable="UV",
+                        time_idx=-1,
+                        vmin=30,
+                        vmax=None,
+                    ),
+                ],
+                n=2,
+            ),
+            _TestCountConfig(  # cf[7]
+                criteria=[
+                    dict(
+                        type_="variable",
+                        variable="z",
+                        time_idx=-1,
+                        vmin=8000,
+                        vmax=None,
+                    ),
+                    dict(
+                        type_="variable",
+                        variable="UV",
+                        time_idx=-1,
+                        vmin=30,
+                        vmax=None,
+                    ),
+                ],
+                require_all=False,
+                n=3,
+            ),
         ],
     )
     def test_complete(self, cf: _TestCountConfig) -> None:
@@ -313,15 +419,12 @@ class Test_Count:
         # TODO Replace ExtendedTrajDataset by TrajDataset
         trajs = cast(
             ExtendedTrajDataset,
-            ExtendedTrajDataset(trajs_ds_factory.run()).select(incomplete=False),
+            ExtendedTrajDataset(trajs_ds_factory.run()).select(
+                [dict(type_="incomplete", value=False)]
+            ),
         )
         n = trajs.count(
-            incomplete=cf.incomplete,
-            boundary=cf.boundary,
-            lon=cf.lon,
-            lat=cf.lat,
-            z=cf.z,
-            uv=cf.uv,
+            criteria=cf.criteria,
             require_all=cf.require_all,
         )
         assert n == cf.n
