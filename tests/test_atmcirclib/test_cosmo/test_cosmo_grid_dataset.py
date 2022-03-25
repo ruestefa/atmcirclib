@@ -14,6 +14,10 @@ import xarray as xr
 from atmcirclib.cosmo import COSMOGridDataset
 from atmcirclib.geo import unrotate_coords
 
+__all__: list[str] = [
+    "create_cosmo_grid_dataset_ds",
+]
+
 # pylint: disable=R0201  # no-self-use
 
 # mypy 0.941 thinks arange returns array of type signed integer (numpy 1.33.2)

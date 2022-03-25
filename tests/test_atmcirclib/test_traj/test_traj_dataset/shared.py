@@ -13,6 +13,14 @@ import numpy as np
 import numpy.typing as npt
 import xarray as xr
 
+# Local
+from ...test_cosmo.test_cosmo_grid_dataset import create_cosmo_grid_dataset_ds
+
+__all__: list[str] = [
+    "TrajsDatasetDsFactory",
+    "create_cosmo_grid_dataset_ds",
+]
+
 
 @dc.dataclass()
 class TrajsDatasetDsFactory:
