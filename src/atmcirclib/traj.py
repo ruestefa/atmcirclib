@@ -51,111 +51,6 @@ class TrajDataset:
         self.config: TrajDataset.Config = self.Config(**config_kwargs)
         self.ds: xr.Dataset = ds
 
-    def get_data(
-        self,
-        name: str,
-        idx_time: NDIndex_T = slice(None),
-        idx_traj: NDIndex_T = slice(None),
-        replace_vnan: bool = True,
-    ) -> npt.NDArray[np.float_]:
-        """Get data (sub-) array of variable with NaNs as missing values."""
-        if idx_time is None:
-            raise ValueError("idx_time must not be None; consider slice(None)")
-        if idx_traj is None:
-            raise ValueError("idx_traj must not be None; consider slice(None)")
-        arr: npt.NDArray[np.float32]
-        try:
-            var = self.ds.variables[name]
-        except KeyError as e:
-            if name == "UV":
-                # mypy 0.941 thinks result has dtype Any (numpy 1.22.3)
-                return cast(
-                    npt.NDArray[np.float_],
-                    np.sqrt(
-                        self.get_data("U", idx_time, idx_traj, replace_vnan) ** 2
-                        + self.get_data("V", idx_time, idx_traj, replace_vnan) ** 2
-                    ),
-                )
-            else:
-                ds_vars = ", ".join(map("'{}'".format, self.ds.variables))
-                dr_vars = ", ".join(map("'{}'".format, ["UV"]))
-                raise ValueError(
-                    f"invalid name '{name}'; neither in dataset ({ds_vars})"
-                    f" nor among implemented derived variables ({dr_vars})"
-                ) from e
-        else:
-            arr = np.array(var.data[idx_time, idx_traj], np.float32)
-        if replace_vnan:
-            arr[arr == self.config.nan] = np.nan
-        return arr
-
-    @classmethod
-    def from_file(cls, path: PathLike_T, **config_kwargs: Any) -> TrajDataset:
-        """Read trajs dataset from file."""
-        try:
-            # ds = xr.open_dataset(path, engine="netcdf4")
-            ds = xr.open_dataset(path)
-        except Exception as e:
-            raise ValueError(f"error opening trajectories files '{path}'") from e
-        return cls(ds=ds, **config_kwargs)
-
-
-# pylint: disable=R0904  # too-many-public-methods (>20)
-class ExtendedTrajDataset(TrajDataset):
-    """A temporary extension of ``TrajDataset`` with additional methods.
-
-    These methods are untested and might be moved to other classes eventually.
-    Only the interface of ``TrajDataset`` can be considered stable!
-
-    """
-
-    @dc.dataclass
-    class Config(TrajDataset.Config):
-        """Configuration.
-
-        Properties:
-
-            start_file: Path to text file with start points; required to provide
-                start points, e.g., to a plotting routine to choose proper bins.
-
-            start_file_header: Number of header lines in start file.
-
-        """
-
-        start_file: Optional[PathLike_T] = None
-        start_file_header: int = 3
-
-    def __init__(
-        self,
-        ds: xr.Dataset,
-        **config_kwargs: Any,
-    ) -> None:
-        """Create a new instance."""
-        self.config: ExtendedTrajDataset.Config
-        super().__init__(ds, **config_kwargs)
-
-    def select(
-        self, criteria: Optional[Criteria_T] = None, **addtl_criteria: Any
-    ) -> TrajDataset:
-        """Return a copy with only those trajs that fulfill the given criteria.
-
-        See docstring of ``get_traj_mask`` for details on the criteria.
-
-        """
-        mask = self.get_traj_mask(criteria, **addtl_criteria)
-        return self._without_masked(~mask)
-
-    def remove(
-        self, criteria: Optional[Criteria_T] = None, **addtl_criteria: Any
-    ) -> TrajDataset:
-        """Return a copy without those trajs that fulfill the given criteria.
-
-        See docstring of ``get_traj_mask`` for details on the criteria.
-
-        """
-        mask = self.get_traj_mask(criteria, **addtl_criteria)
-        return self._without_masked(mask)
-
     def count(
         self, criteria: Optional[Criteria_T] = None, **addtl_criteria: Any
     ) -> int:
@@ -167,15 +62,16 @@ class ExtendedTrajDataset(TrajDataset):
         # mypy thinks return type is Any (mypy v0.941, numpy v1.22.3)
         return cast(int, self.get_traj_mask(criteria, **addtl_criteria).sum())
 
-    def discount(
+    def select(
         self, criteria: Optional[Criteria_T] = None, **addtl_criteria: Any
-    ) -> int:
-        """Count all trajs that don't fulfill the given criteria.
+    ) -> TrajDataset:
+        """Return a copy with only those trajs that fulfill the given criteria.
 
         See docstring of ``get_traj_mask`` for details on the criteria.
 
         """
-        return self.count() - self.count(criteria, **addtl_criteria)
+        mask = self.get_traj_mask(criteria, **addtl_criteria)
+        return self._without_masked(~mask)
 
     def get_traj_mask(
         self,
@@ -249,19 +145,167 @@ class ExtendedTrajDataset(TrajDataset):
                 raise ValueError(f"invalid criterion type '{criterion['type_']}'")
         return mask
 
-    # Note: Typing return array as npt.NDArray[np.float_] leads to overload error
-    # when accessing fields by name (e.g., points["x"]) (numpy v1.22.2)
-    def read_start_points(self) -> npt.NDArray[Any]:
-        """Read start points from ``Config.start_file`` as a structured array."""
-        if self.config.start_file is None:
-            raise self.MissingConfigError("start_file")
-        if self.config.verbose:
-            print(f"read traj start points from {self.config.start_file}")
-        return np.loadtxt(
-            self.config.start_file,
-            skiprows=self.config.start_file_header,
-            dtype=[("lon", "f4"), ("lat", "f4"), ("z", "f4")],
+    def get_data(
+        self,
+        name: str,
+        idx_time: NDIndex_T = slice(None),
+        idx_traj: NDIndex_T = slice(None),
+        replace_vnan: bool = True,
+    ) -> npt.NDArray[np.float_]:
+        """Get data (sub-) array of variable with NaNs as missing values."""
+        if idx_time is None:
+            raise ValueError("idx_time must not be None; consider slice(None)")
+        if idx_traj is None:
+            raise ValueError("idx_traj must not be None; consider slice(None)")
+        arr: npt.NDArray[np.float32]
+        try:
+            var = self.ds.variables[name]
+        except KeyError as e:
+            if name == "UV":
+                # mypy 0.941 thinks result has dtype Any (numpy 1.22.3)
+                return cast(
+                    npt.NDArray[np.float_],
+                    np.sqrt(
+                        self.get_data("U", idx_time, idx_traj, replace_vnan) ** 2
+                        + self.get_data("V", idx_time, idx_traj, replace_vnan) ** 2
+                    ),
+                )
+            else:
+                ds_vars = ", ".join(map("'{}'".format, self.ds.variables))
+                dr_vars = ", ".join(map("'{}'".format, ["UV"]))
+                raise ValueError(
+                    f"invalid name '{name}'; neither in dataset ({ds_vars})"
+                    f" nor among implemented derived variables ({dr_vars})"
+                ) from e
+        else:
+            arr = np.array(var.data[idx_time, idx_traj], np.float32)
+        if replace_vnan:
+            arr[arr == self.config.nan] = np.nan
+        return arr
+
+    def _without_masked(self, mask: npt.NDArray[np.bool_]) -> TrajDataset:
+        """Return a copy without those trajs indicated in the mask."""
+        new_data_vars: dict[str, xr.DataArray] = {}
+        for name, var in self.ds.data_vars.items():
+            assert var.dims == ("time", "id")
+            new_data_vars[name] = xr.DataArray(
+                data=np.delete(var.data, mask, axis=1),
+                coords=var.coords,
+                dims=var.dims,
+                name=var.name,
+                attrs=dict(var.attrs),
+                indexes=dict(var.indexes),
+            )
+        new_ds = xr.Dataset(
+            data_vars=new_data_vars, coords=self.ds.coords, attrs=self.ds.attrs
         )
+        return type(self)(ds=new_ds, **dc.asdict(self.config))
+
+    def _get_traj_mask_full(self, value: bool) -> npt.NDArray[np.bool_]:
+        """Get a trajs mask."""
+        return np.full(self.ds.dims["id"], value, np.bool_)
+
+    def _get_traj_mask_any_incomplete(self) -> npt.NDArray[np.bool_]:
+        """Get 1D mask indicating all trajs with any ``Config.nan`` values."""
+        mask = (self.ds.z.data == self.config.nan).sum(axis=0) > 0
+        # mypy thinks return type is Any (mypy v0.941, numpy v1.22.3)
+        return cast(npt.NDArray[np.bool_], mask)
+
+    def _get_traj_mask_any_boundary(
+        self, grid: COSMOGridDataset, size_deg: float
+    ) -> npt.NDArray[np.bool_]:
+        """Get 1D mask indicating all trajs ever reaching the boundary zone."""
+        llrlon, urrlon, llrlat, urrlat = grid.get_bbox_xy().shrink(size_deg)
+        rlon, rlat = self.ds.longitude.data, self.ds.latitude.data
+        nan_mask = self._get_traj_mask_any_incomplete()
+        rlon_mask = np.where(nan_mask, True, (rlon < llrlon) | (rlon > urrlon))
+        rlat_mask = np.where(nan_mask, True, (rlat < llrlat) | (rlat > urrlat))
+        mask = (rlon_mask | rlat_mask).sum(axis=0) > 0
+        # mypy thinks return type is Any (mypy v0.941, numpy v1.22.3)
+        return cast(npt.NDArray[np.bool_], mask)
+
+    def _get_traj_mask_in_range(
+        self, arr: npt.NDArray[np.float_], vmin: Optional[float], vmax: Optional[float]
+    ) -> npt.NDArray[np.bool_]:
+        """Get a task indicating trajs with a values of ``arr`` in range."""
+        _name_ = "_get_traj_mask_in_range"
+        if n_incomplete := self.count([dict(type_="incomplete", value=True)]):
+            raise NotImplementedError(
+                f"{type(self).__name__}.{_name_} for incomplete trajs"
+                f" ({n_incomplete:,}/{self.count():,})"
+            )
+        mask = self._get_traj_mask_full(True)
+        if vmin is not None:
+            mask &= arr >= vmin
+        if vmax is not None:
+            mask &= arr <= vmax
+        return mask
+
+    @classmethod
+    def from_file(cls, path: PathLike_T, **config_kwargs: Any) -> TrajDataset:
+        """Read trajs dataset from file."""
+        try:
+            # ds = xr.open_dataset(path, engine="netcdf4")
+            ds = xr.open_dataset(path)
+        except Exception as e:
+            raise ValueError(f"error opening trajectories files '{path}'") from e
+        return cls(ds=ds, **config_kwargs)
+
+
+# pylint: disable=R0904  # too-many-public-methods (>20)
+class ExtendedTrajDataset(TrajDataset):
+    """A temporary extension of ``TrajDataset`` with additional methods.
+
+    These methods are untested and might be moved to other classes eventually.
+    Only the interface of ``TrajDataset`` can be considered stable!
+
+    """
+
+    @dc.dataclass
+    class Config(TrajDataset.Config):
+        """Configuration.
+
+        Properties:
+
+            start_file: Path to text file with start points; required to provide
+                start points, e.g., to a plotting routine to choose proper bins.
+
+            start_file_header: Number of header lines in start file.
+
+        """
+
+        start_file: Optional[PathLike_T] = None
+        start_file_header: int = 3
+
+    def __init__(
+        self,
+        ds: xr.Dataset,
+        **config_kwargs: Any,
+    ) -> None:
+        """Create a new instance."""
+        self.config: ExtendedTrajDataset.Config
+        super().__init__(ds, **config_kwargs)
+
+    def remove(
+        self, criteria: Optional[Criteria_T] = None, **addtl_criteria: Any
+    ) -> TrajDataset:
+        """Return a copy without those trajs that fulfill the given criteria.
+
+        See docstring of ``get_traj_mask`` for details on the criteria.
+
+        """
+        mask = self.get_traj_mask(criteria, **addtl_criteria)
+        return self._without_masked(mask)
+
+    def discount(
+        self, criteria: Optional[Criteria_T] = None, **addtl_criteria: Any
+    ) -> int:
+        """Count all trajs that don't fulfill the given criteria.
+
+        See docstring of ``get_traj_mask`` for details on the criteria.
+
+        """
+        return self.count() - self.count(criteria, **addtl_criteria)
 
     # Note: Typing return array as npt.NDArray[np.float_] leads to overload error
     # when accessing fields by name (e.g., points["x"]) (numpy v1.22.2)
@@ -285,6 +329,20 @@ class ExtendedTrajDataset(TrajDataset):
             dtype=[("lon", "f4"), ("lat", "f4"), ("z", "f4")],
         )
         return np.unique(points)
+
+    # Note: Typing return array as npt.NDArray[np.float_] leads to overload error
+    # when accessing fields by name (e.g., points["x"]) (numpy v1.22.2)
+    def read_start_points(self) -> npt.NDArray[Any]:
+        """Read start points from ``Config.start_file`` as a structured array."""
+        if self.config.start_file is None:
+            raise self.MissingConfigError("start_file")
+        if self.config.verbose:
+            print(f"read traj start points from {self.config.start_file}")
+        return np.loadtxt(
+            self.config.start_file,
+            skiprows=self.config.start_file_header,
+            dtype=[("lon", "f4"), ("lat", "f4"), ("z", "f4")],
+        )
 
     def get_start_point_bin_edges(
         self, *, try_file: bool = True, extrapolate: bool = True
@@ -406,61 +464,3 @@ class ExtendedTrajDataset(TrajDataset):
     def format_end(self) -> str:
         """Format the last time step in the file, optionally as a string."""
         return self.format_abs_time(idcs=[-1])[0]
-
-    def _without_masked(self, mask: npt.NDArray[np.bool_]) -> TrajDataset:
-        """Return a copy without those trajs indicated in the mask."""
-        new_data_vars: dict[str, xr.DataArray] = {}
-        for name, var in self.ds.data_vars.items():
-            assert var.dims == ("time", "id")
-            new_data_vars[name] = xr.DataArray(
-                data=np.delete(var.data, mask, axis=1),
-                coords=var.coords,
-                dims=var.dims,
-                name=var.name,
-                attrs=dict(var.attrs),
-                indexes=dict(var.indexes),
-            )
-        new_ds = xr.Dataset(
-            data_vars=new_data_vars, coords=self.ds.coords, attrs=self.ds.attrs
-        )
-        return type(self)(ds=new_ds, **dc.asdict(self.config))
-
-    def _get_traj_mask_full(self, value: bool) -> npt.NDArray[np.bool_]:
-        """Get a trajs mask."""
-        return np.full(self.ds.dims["id"], value, np.bool_)
-
-    def _get_traj_mask_any_incomplete(self) -> npt.NDArray[np.bool_]:
-        """Get 1D mask indicating all trajs with any ``Config.nan`` values."""
-        mask = (self.ds.z.data == self.config.nan).sum(axis=0) > 0
-        # mypy thinks return type is Any (mypy v0.941, numpy v1.22.3)
-        return cast(npt.NDArray[np.bool_], mask)
-
-    def _get_traj_mask_any_boundary(
-        self, grid: COSMOGridDataset, size_deg: float
-    ) -> npt.NDArray[np.bool_]:
-        """Get 1D mask indicating all trajs ever reaching the boundary zone."""
-        llrlon, urrlon, llrlat, urrlat = grid.get_bbox_xy().shrink(size_deg)
-        rlon, rlat = self.ds.longitude.data, self.ds.latitude.data
-        nan_mask = self._get_traj_mask_any_incomplete()
-        rlon_mask = np.where(nan_mask, True, (rlon < llrlon) | (rlon > urrlon))
-        rlat_mask = np.where(nan_mask, True, (rlat < llrlat) | (rlat > urrlat))
-        mask = (rlon_mask | rlat_mask).sum(axis=0) > 0
-        # mypy thinks return type is Any (mypy v0.941, numpy v1.22.3)
-        return cast(npt.NDArray[np.bool_], mask)
-
-    def _get_traj_mask_in_range(
-        self, arr: npt.NDArray[np.float_], vmin: Optional[float], vmax: Optional[float]
-    ) -> npt.NDArray[np.bool_]:
-        """Get a task indicating trajs with a values of ``arr`` in range."""
-        _name_ = "_get_traj_mask_in_range"
-        if n_incomplete := self.count([dict(type_="incomplete", value=True)]):
-            raise NotImplementedError(
-                f"{type(self).__name__}.{_name_} for incomplete trajs"
-                f" ({n_incomplete:,}/{self.count():,})"
-            )
-        mask = self._get_traj_mask_full(True)
-        if vmin is not None:
-            mask &= arr >= vmin
-        if vmax is not None:
-            mask &= arr <= vmax
-        return mask

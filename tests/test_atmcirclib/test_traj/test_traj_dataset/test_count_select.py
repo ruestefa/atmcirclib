@@ -14,7 +14,6 @@ import pytest
 
 # First-party
 from atmcirclib.cosmo import COSMOGridDataset
-from atmcirclib.traj import ExtendedTrajDataset  # TODO replace by TrajDataset
 from atmcirclib.traj import TrajDataset
 
 # Local
@@ -278,8 +277,7 @@ class Test_Count:
 
     def test_incomplete(self) -> None:
         """Count trajs that leave the domain."""
-        # TODO Replace ExtendedTrajDataset by TrajDataset
-        trajs = ExtendedTrajDataset(trajs_ds_factory.run())
+        trajs = TrajDataset(trajs_ds_factory.run())
         n_incomplete = trajs.count([dict(type_="incomplete", value=True)])
         n_complete = trajs.count([dict(type_="incomplete", value=False)])
         assert n_incomplete == 2
@@ -289,8 +287,7 @@ class Test_Count:
     # (pull domain info, incl. boundary zone coords, out of TrajDataset)
     def test_boundary(self) -> None:
         """Count trajs that reach the boundary zone."""
-        # TODO Replace ExtendedTrajDataset by TrajDataset
-        trajs = ExtendedTrajDataset(trajs_ds_factory.run())
+        trajs = TrajDataset(trajs_ds_factory.run())
         n_boundary = trajs.count(
             [dict(type_="boundary", value=True, grid=GRID_DS, size_deg=1)]
         )
@@ -414,12 +411,8 @@ class Test_Count:
     )
     def test_complete(self, cf: _TestCountConfig) -> None:
         """Count only complete trajs trajs that meet the given criteria."""
-        # TODO Replace ExtendedTrajDataset by TrajDataset
-        trajs = cast(
-            ExtendedTrajDataset,
-            ExtendedTrajDataset(trajs_ds_factory.run()).select(
-                [dict(type_="incomplete", value=False)]
-            ),
+        trajs = TrajDataset(trajs_ds_factory.run()).select(
+            [dict(type_="incomplete", value=False)]
         )
         n = trajs.count(
             criteria=cf.criteria,
