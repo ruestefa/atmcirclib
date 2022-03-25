@@ -15,6 +15,7 @@ import pytest
 # First-party
 from atmcirclib.cosmo import COSMOGridDataset
 from atmcirclib.traj import ExtendedTrajDataset  # TODO replace by TrajDataset
+from atmcirclib.traj import TrajDataset
 
 # Local
 from .shared import create_cosmo_grid_dataset_ds
@@ -245,6 +246,19 @@ GRID_DS = COSMOGridDataset(
         height_toa_m=Z_LIM[1],
     )
 )
+
+
+class Test_GetData:
+    """Test some fields unavailable in the data in ``test_base``."""
+
+    def test_uv(self) -> None:
+        """Get horizontal wind speed."""
+        trajs = TrajDataset(trajs_ds_factory.run())
+        uv = trajs.get_data("UV")
+        u_ref = np.where(REF_DATA_D["U"] == VNAN, np.nan, REF_DATA_D["U"])
+        v_ref = np.where(REF_DATA_D["V"] == VNAN, np.nan, REF_DATA_D["V"])
+        uv_ref = np.sqrt(u_ref ** 2 + v_ref ** 2)
+        assert np.allclose(uv, uv_ref, equal_nan=True)
 
 
 class Test_Count:

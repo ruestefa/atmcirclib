@@ -63,10 +63,14 @@ class TrajDataset:
             var = self.ds.variables[name]
         except KeyError as e:
             if name == "UV":
-                arr = np.sqrt(
-                    np.array(self.ds.variables["U"][idx_time, idx_traj]) ** 2,
-                    np.array(self.ds.variables["V"][idx_time, idx_traj]) ** 2,
-                ).astype(np.float32)
+                # mypy 0.941 thinks result has dtype Any (numpy 1.22.3)
+                return cast(
+                    npt.NDArray[np.float_],
+                    np.sqrt(
+                        self.get_data("U", idx_time, idx_traj, replace_vnan) ** 2
+                        + self.get_data("V", idx_time, idx_traj, replace_vnan) ** 2
+                    ),
+                )
             else:
                 ds_vars = ", ".join(map("'{}'".format, self.ds.variables))
                 dr_vars = ", ".join(map("'{}'".format, ["UV"]))
