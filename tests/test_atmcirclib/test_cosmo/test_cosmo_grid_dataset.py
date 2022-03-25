@@ -24,7 +24,7 @@ POLE_RLAT: float = 30.0
 HEIGHT_TOA_M: float = 22_000.0
 
 
-def create_grid_xr_dataset(
+def create_cosmo_grid_dataset_ds(
     rlon: npt.NDArray[np.float_] = RLON,
     rlat: npt.NDArray[np.float_] = RLAT,
     pole_rlon: float = POLE_RLON,
@@ -191,7 +191,7 @@ def create_grid_xr_dataset(
 
 def test_grid_xr_dataset() -> None:
     """Test initialization of grid xarray test dataset."""
-    create_grid_xr_dataset()
+    create_cosmo_grid_dataset_ds()
 
 
 class Test_GetBbox:
@@ -199,35 +199,35 @@ class Test_GetBbox:
 
     def test_xy(self) -> None:
         """Get horizontal (x, y) bounding box."""
-        grid = COSMOGridDataset(create_grid_xr_dataset())
+        grid = COSMOGridDataset(create_cosmo_grid_dataset_ds())
         bbox = grid.get_bbox_xy()
         ref = (RLON[0], RLON[-1], RLAT[0], RLAT[-1])
         assert bbox == ref
 
     def test_xz(self) -> None:
         """Get vertical (x, z) bounding box."""
-        grid = COSMOGridDataset(create_grid_xr_dataset())
+        grid = COSMOGridDataset(create_cosmo_grid_dataset_ds())
         bbox = grid.get_bbox_xz()
         ref = (RLON[0], RLON[-1], 0.0, HEIGHT_TOA_M)
         assert bbox == ref
 
     def test_xz_km(self) -> None:
         """Get vertical (x, z) bounding box with z in km."""
-        grid = COSMOGridDataset(create_grid_xr_dataset(), z_unit="km")
+        grid = COSMOGridDataset(create_cosmo_grid_dataset_ds(), z_unit="km")
         bbox = grid.get_bbox_xz()
         ref = (RLON[0], RLON[-1], 0.0, HEIGHT_TOA_M / 1000)
         assert bbox == ref
 
     def test_yz(self) -> None:
         """Get vertical (x, z) bounding box."""
-        grid = COSMOGridDataset(create_grid_xr_dataset())
+        grid = COSMOGridDataset(create_cosmo_grid_dataset_ds())
         bbox = grid.get_bbox_yz()
         ref = (RLAT[0], RLAT[-1], 0.0, HEIGHT_TOA_M)
         assert bbox == ref
 
     def test_yz_km(self) -> None:
         """Get vertical (x, z) bounding box with z in km."""
-        grid = COSMOGridDataset(create_grid_xr_dataset(), z_unit="km")
+        grid = COSMOGridDataset(create_cosmo_grid_dataset_ds(), z_unit="km")
         bbox = grid.get_bbox_yz()
         ref = (RLAT[0], RLAT[-1], 0.0, HEIGHT_TOA_M / 1000)
         assert bbox == ref
@@ -238,13 +238,13 @@ class Test_GetProj:
 
     def test_type(self) -> None:
         """Check the type of the projection object."""
-        grid = COSMOGridDataset(create_grid_xr_dataset())
+        grid = COSMOGridDataset(create_cosmo_grid_dataset_ds())
         proj = grid.get_proj()
         assert isinstance(proj, ccrs.RotatedPole)
 
     def test_transform(self) -> None:
         """Use the projection to unrotate the rlat/rlon grid arrays."""
-        grid = COSMOGridDataset(create_grid_xr_dataset())
+        grid = COSMOGridDataset(create_cosmo_grid_dataset_ds())
         lon, lat = unrotate_coords(
             rlon=grid.ds.rlon.data,
             rlat=grid.ds.rlat.data,

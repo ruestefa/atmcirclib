@@ -15,7 +15,7 @@ import xarray as xr
 
 
 @dc.dataclass()
-class TrajsXrDatasetFactory:
+class TrajsDatasetDsFactory:
     """Create trajs xr datasets for testing."""
 
     attrs: dict[str, Any]
@@ -35,7 +35,7 @@ class TrajsXrDatasetFactory:
             self.raw_coords_d
         )
 
-    def __call__(
+    def run(
         self,
         attrs: Optional[dict[str, Any]] = None,
         raw_coords_d: Optional[dict[str, npt.NDArray[np.generic]]] = None,

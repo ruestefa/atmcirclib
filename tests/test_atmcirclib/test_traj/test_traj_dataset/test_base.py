@@ -16,7 +16,7 @@ from atmcirclib.traj import TrajDataset
 from atmcirclib.typing import NDIndex_T
 
 # Local
-from .shared import TrajsXrDatasetFactory
+from .shared import TrajsDatasetDsFactory
 
 # pylint: disable=R0201  # no-self-use
 
@@ -224,7 +224,7 @@ RAW_DATA_D[_name] = [  # multiplied by 1e12 except -999
 ]
 
 
-trajs_ds_factory = TrajsXrDatasetFactory(
+trajs_ds_factory = TrajsDatasetDsFactory(
     attrs=ATTRS,
     raw_coords_d=RAW_COORDS_D,
     raw_data_d=RAW_DATA_D,
@@ -243,7 +243,7 @@ class Test_TestData:
 
     def test_create_trajs_xr_dataset(self) -> None:
         """Test creation of a mock trajs dataset."""
-        ds = trajs_ds_factory()
+        ds = trajs_ds_factory.run()
         assert ds.attrs == ATTRS
         # Check time coordinate
         assert set(dict(ds.coords)) == {"time"}
@@ -258,7 +258,7 @@ class Test_TestData:
     def test_ref_data(self) -> None:
         """Make sure dataset contains copies of ref array."""
         name = "z"
-        ds = trajs_ds_factory()
+        ds = trajs_ds_factory.run()
         assert np.allclose(ds.variables[name].data, REF_DATA_D[name].data)
         mask = ds.variables[name].data > 3000
         assert mask.sum() > 0
@@ -277,13 +277,13 @@ class Test_Init:
 
     def test_ds(self) -> None:
         """Initalize with xarray dataset."""
-        ds = trajs_ds_factory()
+        ds = trajs_ds_factory.run()
         trajs = TrajDataset(ds)
         assert trajs.ds == ds
 
     def test_config(self) -> None:
         """Initialize with changed config parameter."""
-        ds = trajs_ds_factory()
+        ds = trajs_ds_factory.run()
         trajs_ref = TrajDataset(ds)
         trajs_exp = TrajDataset(ds, nan=666)
         assert trajs_ref.config.nan == -999
@@ -295,7 +295,7 @@ class Test_GetData:
 
     def test_default(self) -> None:
         """Call with default options, whereby -999 are replaced by nans."""
-        trajs = TrajDataset(trajs_ds_factory())
+        trajs = TrajDataset(trajs_ds_factory.run())
         for name, ref in REF_DATA_D.items():
             # Raw field contains -999
             exp = trajs.ds.variables[name].data
@@ -308,7 +308,7 @@ class Test_GetData:
 
     def test_default_explicit(self) -> None:
         """Call with explicit default values."""
-        trajs = TrajDataset(trajs_ds_factory())
+        trajs = TrajDataset(trajs_ds_factory.run())
         for name, ref in REF_DATA_D.items():
             ref = trajs.get_data(name)
             exp = trajs.get_data(
@@ -321,7 +321,7 @@ class Test_GetData:
 
     def test_replace_vnan(self) -> None:
         """Don't replace -999 by nans."""
-        trajs = TrajDataset(trajs_ds_factory())
+        trajs = TrajDataset(trajs_ds_factory.run())
         for name, ref in REF_DATA_D.items():
             exp = trajs.get_data(name, replace_vnan=False)
             assert np.allclose(exp, ref, equal_nan=True)
@@ -347,7 +347,7 @@ class Test_GetData:
     )
     def test_indexing(self, c: IndexingTestParams) -> None:
         """Get subarrays by indexing."""
-        trajs = TrajDataset(trajs_ds_factory())
+        trajs = TrajDataset(trajs_ds_factory.run())
         idcs: dict[str, NDIndex_T] = {}
         if c.idx_time is None:
             c.idx_time = slice(None)
