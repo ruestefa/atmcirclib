@@ -58,6 +58,10 @@ class TrajDataset:
         # mypy thinks return type is Any (mypy v0.941, numpy v1.22.3)
         return cast(int, self.get_traj_mask(criteria).sum())
 
+    def discount(self, criteria: Optional[Criteria] = None) -> int:
+        """Count all trajs that don't fulfill the given criteria."""
+        return self.count((criteria or Criteria()).invert())
+
     def select(self, criteria: Optional[Criteria] = None) -> TrajDataset:
         """Return a copy with only those trajs that fulfill the given criteria.
 
@@ -66,6 +70,10 @@ class TrajDataset:
         """
         mask = self.get_traj_mask(criteria)
         return self._without_masked(~mask)
+
+    def remove(self, criteria: Optional[Criteria] = None) -> TrajDataset:
+        """Return a copy without those trajs that fulfill the given criteria."""
+        return self.select((criteria or Criteria()).invert())
 
     def get_traj_mask(
         self,
@@ -191,23 +199,6 @@ class ExtendedTrajDataset(TrajDataset):
         """Create a new instance."""
         self.config: ExtendedTrajDataset.Config
         super().__init__(ds, **config_kwargs)
-
-    def remove(self, criteria: Optional[Criteria] = None) -> TrajDataset:
-        """Return a copy without those trajs that fulfill the given criteria.
-
-        See docstring of ``get_traj_mask`` for details on the criteria.
-
-        """
-        mask = self.get_traj_mask(criteria)
-        return self._without_masked(mask)
-
-    def discount(self, criteria: Optional[Criteria] = None) -> int:
-        """Count all trajs that don't fulfill the given criteria.
-
-        See docstring of ``get_traj_mask`` for details on the criteria.
-
-        """
-        return self.count() - self.count(criteria)
 
     # Note: Typing return array as npt.NDArray[np.float_] leads to overload error
     # when accessing fields by name (e.g., points["x"]) (numpy v1.22.2)

@@ -427,3 +427,30 @@ class Test_Count:
         )
         n = trajs.count(criteria=cf.criteria)
         assert n == cf.n
+
+    def test_discount(self) -> None:
+        """Check method discount that inverts the criteria."""
+        criteria = Criteria(
+            [
+                VariableCriterion(
+                    variable="z",
+                    time_idx=-1,
+                    vmin=8000,
+                    vmax=None,
+                ),
+                VariableCriterion(
+                    variable="UV",
+                    time_idx=-1,
+                    vmin=30,
+                    vmax=None,
+                ),
+            ],
+        )
+        in_domain_criteria = Criteria([LeaveDomainCriterion().invert()])
+        trajs = TrajDataset(trajs_ds_factory.run()).select(in_domain_criteria)
+        assert trajs.count(criteria=criteria) == 2
+        assert trajs.discount(criteria=criteria) == 2
+        assert trajs.count(criteria=criteria.derive(require_all=False)) == 3
+        assert trajs.discount(criteria=criteria.derive(require_all=False)) == 1
+        assert trajs.count(criteria=criteria.derive(require_all=False).invert()) == 1
+        assert trajs.discount(criteria=criteria.derive(require_all=False).invert()) == 3

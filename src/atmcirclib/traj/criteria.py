@@ -22,6 +22,13 @@ if TYPE_CHECKING:
     from .traj_dataset import TrajDataset
 
 
+def sfmt(v: Any, q: str = "'") -> str:
+    """If ``v`` is a string, adding quotes, otherwise convert to string."""
+    if isinstance(v, str):
+        return f"{q}{v}{q}"
+    return str(v)
+
+
 class Criterion(abc.ABC):
     """Base class of criteria to selection trajectories."""
 
@@ -30,16 +37,23 @@ class Criterion(abc.ABC):
         """Apply criterion to trajectories and return 1D mask array."""
         return self.get_mask_full(trajs)
 
+    @abc.abstractmethod
     def invert(self) -> Criterion:
         """Invert the criterion."""
-        raise NotImplementedError(
-            f"criterion '{type(self).__name__}' is not invertible"
-        )
+        raise NotImplementedError(f"'{type(self).__name__}' is not invertible")
 
     def dict(self) -> dict[str, Any]:
         """Return dictionary reprentation with all instantiation arguments."""
         # pylint: disable=R0201  # no-self-use
         return {}
+
+    def __repr__(self) -> str:
+        """Return a string representation with all instantiation arguments."""
+        return (
+            f"{type(self).__name__}("
+            + ", ".join(f"{key}={sfmt(value)}" for key, value in self.dict().items())
+            + ")"
+        )
 
     @staticmethod
     def get_mask_full(trajs: TrajDataset, value: bool = True) -> npt.NDArray[np.bool_]:
@@ -47,8 +61,12 @@ class Criterion(abc.ABC):
         return np.full(trajs.ds.dims["id"], value, np.bool_)
 
 
-class VariableCriterion(Criterion):
-    """Select trajectories based on a traced variable."""
+class _VariableCriterion(Criterion):
+    """Base class for ``VariableCriterion`` and its inverse.
+
+    Using a common base class avoid defining their (identical) arguments twice.
+
+    """
 
     def __init__(
         self,
@@ -62,6 +80,19 @@ class VariableCriterion(Criterion):
         self.time_idx: int = time_idx
         self.vmin: Optional[float] = vmin
         self.vmax: Optional[float] = vmax
+
+    def dict(self) -> dict[str, Any]:
+        """Return dictionary reprentation with all instantiation arguments."""
+        return {
+            "variable": self.variable,
+            "time_idx": self.time_idx,
+            "vmin": self.vmin,
+            "vmax": self.vmax,
+        }
+
+
+class VariableCriterion(_VariableCriterion):
+    """Select trajectories based on a traced variable."""
 
     def apply(self, trajs: TrajDataset) -> npt.NDArray[np.bool_]:
         """Apply criterion to trajectories and return 1D mask array."""
@@ -77,6 +108,22 @@ class VariableCriterion(Criterion):
         if self.vmax is not None:
             mask &= arr <= self.vmax
         return mask
+
+    def invert(self) -> NotVariableCriterion:
+        """Invert the criterion."""
+        return NotVariableCriterion(**self.dict())
+
+
+class NotVariableCriterion(_VariableCriterion):
+    """Select trajectories that don't meet the trace variable conditions."""
+
+    def apply(self, trajs: TrajDataset) -> npt.NDArray[np.bool_]:
+        """Apply criterion to trajectories and return 1D mask array."""
+        return ~self.invert().apply(trajs)
+
+    def invert(self) -> VariableCriterion:
+        """Invert the criterion."""
+        return VariableCriterion(**self.dict())
 
 
 class LeaveDomainCriterion(Criterion):
@@ -98,8 +145,7 @@ class NotLeaveDomainCriterion(Criterion):
 
     def apply(self, trajs: TrajDataset) -> npt.NDArray[np.bool_]:
         """Apply criterion to trajectories and return 1D mask array."""
-        mask = self.invert().apply(trajs)
-        return ~mask
+        return ~self.invert().apply(trajs)
 
     def invert(self) -> LeaveDomainCriterion:
         """Invert the criterion."""
@@ -107,7 +153,11 @@ class NotLeaveDomainCriterion(Criterion):
 
 
 class _BoundaryZoneCriterion(Criterion):
-    """Base class for invertible ``BoundaryZoneCriterion`` and its inverse."""
+    """Base class for invertible ``BoundaryZoneCriterion`` and its inverse.
+
+    Using a common base class avoid defining their (identical) arguments twice.
+
+    """
 
     def __init__(self, grid: COSMOGridDataset, size_deg: float) -> None:
         """Create a new instance."""
@@ -174,3 +224,30 @@ class Criteria(UserList[Criterion]):
         """
         super().__init__(criteria)
         self.require_all: bool = require_all
+
+    def invert(self) -> Criteria:
+        """Invert the criteria."""
+        return type(self)(
+            criteria=[criterion.invert() for criterion in self],
+            require_all=not self.require_all,
+        )
+
+    def derive(
+        self,
+        criteria: Optional[Sequence[Criterion]] = None,
+        *,
+        require_all: Optional[bool] = None,
+    ) -> Criteria:
+        """Derive an instance with optionally adapted parameters."""
+        if criteria is None:
+            criteria = list(self)
+        if require_all is None:
+            require_all = self.require_all
+        return type(self)(criteria, require_all=require_all)
+
+    def dict(self) -> dict[str, Any]:
+        """Return dictionary reprentation with all instantiation arguments."""
+        return {
+            "criteria": list(self),
+            "require_all": self.require_all,
+        }
