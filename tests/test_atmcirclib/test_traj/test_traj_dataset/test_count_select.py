@@ -14,7 +14,11 @@ import pytest
 
 # First-party
 from atmcirclib.cosmo import COSMOGridDataset
+from atmcirclib.traj import BoundaryZoneCriterion
+from atmcirclib.traj import Criterion
+from atmcirclib.traj import IncompleteCriterion
 from atmcirclib.traj import TrajDataset
+from atmcirclib.traj import VariableCriterion
 
 # Local
 from .shared import create_cosmo_grid_dataset_ds
@@ -278,8 +282,8 @@ class Test_Count:
     def test_incomplete(self) -> None:
         """Count trajs that leave the domain."""
         trajs = TrajDataset(trajs_ds_factory.run())
-        n_incomplete = trajs.count([dict(type_="incomplete", value=True)])
-        n_complete = trajs.count([dict(type_="incomplete", value=False)])
+        n_incomplete = trajs.count([IncompleteCriterion(True)])
+        n_complete = trajs.count([IncompleteCriterion(False)])
         assert n_incomplete == 2
         assert n_complete == 4
 
@@ -288,16 +292,14 @@ class Test_Count:
     def test_boundary(self) -> None:
         """Count trajs that reach the boundary zone."""
         trajs = TrajDataset(trajs_ds_factory.run())
-        n_boundary = trajs.count(
-            [dict(type_="boundary", value=True, grid=GRID_DS, size_deg=1)]
-        )
+        n_boundary = trajs.count([BoundaryZoneCriterion(grid=GRID_DS, size_deg=1)])
         assert n_boundary == 4
 
     @dc.dataclass
     class _TestCountConfig:
         """Configuration of ``test_z``."""
 
-        criteria: Collection[dict[str, Any]]
+        criteria: Collection[Criterion]
         require_all: bool = True
         n: int = -1
 
@@ -310,8 +312,7 @@ class Test_Count:
             ),
             _TestCountConfig(  # cf[1]
                 criteria=[
-                    dict(
-                        type_="variable",
+                    VariableCriterion(
                         variable="z",
                         time_idx=0,
                         vmin=3000,
@@ -322,8 +323,7 @@ class Test_Count:
             ),
             _TestCountConfig(  # cf[2]
                 criteria=[
-                    dict(
-                        type_="variable",
+                    VariableCriterion(
                         variable="z",
                         time_idx=6,
                         vmin=None,
@@ -334,8 +334,7 @@ class Test_Count:
             ),
             _TestCountConfig(  # cf[3]
                 criteria=[
-                    dict(
-                        type_="variable",
+                    VariableCriterion(
                         variable="z",
                         time_idx=-3,
                         vmin=7500,
@@ -346,8 +345,7 @@ class Test_Count:
             ),
             _TestCountConfig(  # cf[4]
                 criteria=[
-                    dict(
-                        type_="variable",
+                    VariableCriterion(
                         variable="UV",
                         time_idx=5,
                         vmin=100,
@@ -358,8 +356,7 @@ class Test_Count:
             ),
             _TestCountConfig(  # cf[5]
                 criteria=[
-                    dict(
-                        type_="variable",
+                    VariableCriterion(
                         variable="UV",
                         time_idx=3,
                         vmin=20,
@@ -370,15 +367,13 @@ class Test_Count:
             ),
             _TestCountConfig(  # cf[6]
                 criteria=[
-                    dict(
-                        type_="variable",
+                    VariableCriterion(
                         variable="z",
                         time_idx=-1,
                         vmin=8000,
                         vmax=None,
                     ),
-                    dict(
-                        type_="variable",
+                    VariableCriterion(
                         variable="UV",
                         time_idx=-1,
                         vmin=30,
@@ -389,15 +384,13 @@ class Test_Count:
             ),
             _TestCountConfig(  # cf[7]
                 criteria=[
-                    dict(
-                        type_="variable",
+                    VariableCriterion(
                         variable="z",
                         time_idx=-1,
                         vmin=8000,
                         vmax=None,
                     ),
-                    dict(
-                        type_="variable",
+                    VariableCriterion(
                         variable="UV",
                         time_idx=-1,
                         vmin=30,
@@ -412,7 +405,7 @@ class Test_Count:
     def test_complete(self, cf: _TestCountConfig) -> None:
         """Count only complete trajs trajs that meet the given criteria."""
         trajs = TrajDataset(trajs_ds_factory.run()).select(
-            [dict(type_="incomplete", value=False)]
+            [IncompleteCriterion(value=False)]
         )
         n = trajs.count(
             criteria=cf.criteria,

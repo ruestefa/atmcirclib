@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 # Standard library
+import abc
 import dataclasses as dc
 import datetime as dt
 from collections.abc import Collection
@@ -22,8 +23,85 @@ from atmcirclib.typing import NDIndex_T
 from atmcirclib.typing import PathLike_T
 
 # Custom types
-Criterion_T = dict[str, Any]
-Criteria_T = Collection[Criterion_T]
+Criteria_T = Collection["Criterion"]
+
+
+class Criterion(abc.ABC):
+    """Base class of criteria to selection trajectories."""
+
+    @abc.abstractmethod
+    def apply(self, trajs: TrajDataset) -> npt.NDArray[np.bool_]:
+        """Apply criterion to trajectories and return 1D mask array."""
+        return self.get_mask_full(trajs)
+
+    @staticmethod
+    def get_mask_full(trajs: TrajDataset, value: bool = True) -> npt.NDArray[np.bool_]:
+        """Get a trajs mask."""
+        return np.full(trajs.ds.dims["id"], value, np.bool_)
+
+
+@dc.dataclass
+class VariableCriterion(Criterion):
+    """Select trajectories based on a traced variable."""
+
+    variable: str
+    time_idx: int
+    vmin: Optional[float] = None
+    vmax: Optional[float] = None
+
+    def apply(self, trajs: TrajDataset) -> npt.NDArray[np.bool_]:
+        """Apply criterion to trajectories and return 1D mask array."""
+        arr = trajs.get_data(self.variable, idx_time=self.time_idx)
+        if n_incomplete := trajs.count([IncompleteCriterion()]):
+            raise NotImplementedError(
+                f"{type(self).__name__}.apply for incomplete trajs"
+                f" ({n_incomplete:,}/{trajs.count():,})"
+            )
+        mask = self.get_mask_full(trajs, True)
+        if self.vmin is not None:
+            mask &= arr >= self.vmin
+        if self.vmax is not None:
+            mask &= arr <= self.vmax
+        return mask
+
+
+# TODO eliminate/improve
+@dc.dataclass
+class IncompleteCriterion(Criterion):
+    """Select incomplete trajectories that leave the domain."""
+
+    value: bool = True
+
+    def apply(self, trajs: TrajDataset) -> npt.NDArray[np.bool_]:
+        """Apply criterion to trajectories and return 1D mask array."""
+        mask = (trajs.ds.z.data == trajs.config.nan).sum(axis=0) > 0
+        if not self.value:
+            mask = ~mask
+        # mypy thinks return type is Any (mypy v0.941, numpy v1.22.3)
+        return cast(npt.NDArray[np.bool_], mask)
+
+
+# TODO eliminate/improve
+@dc.dataclass
+class BoundaryZoneCriterion(Criterion):
+    """Select trajectories that enter the domain boundary zone at one point."""
+
+    grid: COSMOGridDataset
+    size_deg: float
+    value: bool = True
+
+    def apply(self, trajs: TrajDataset) -> npt.NDArray[np.bool_]:
+        """Apply criterion to trajectories and return 1D mask array."""
+        llrlon, urrlon, llrlat, urrlat = self.grid.get_bbox_xy().shrink(self.size_deg)
+        rlon, rlat = trajs.ds.longitude.data, trajs.ds.latitude.data
+        nan_mask = IncompleteCriterion().apply(trajs)
+        rlon_mask = np.where(nan_mask, True, (rlon < llrlon) | (rlon > urrlon))
+        rlat_mask = np.where(nan_mask, True, (rlat < llrlat) | (rlat > urrlat))
+        mask = (rlon_mask | rlat_mask).sum(axis=0) > 0
+        if not self.value:
+            mask = ~mask
+        # mypy thinks return type is Any (mypy v0.941, numpy v1.22.3)
+        return cast(npt.NDArray[np.bool_], mask)
 
 
 class TrajDataset:
@@ -113,36 +191,11 @@ class TrajDataset:
             else:
                 mask[:] |= incr
 
-        mask = self._get_traj_mask_full(require_all)
-        criterion: Criterion_T
+        mask = Criterion.get_mask_full(self, value=require_all)
+        criterion: Criterion
         for criterion in criteria or []:
-            assert "type_" in criterion, str(criterion)  # TMP
-            if criterion["type_"] == "incomplete":
-                assert "value" in criterion, str(criterion)
-                incr = self._get_traj_mask_any_incomplete()
-                update_mask(mask, incr if criterion["value"] else ~incr)
-            elif criterion["type_"] == "boundary":
-                assert "value" in criterion, str(criterion)  # TMP
-                assert "grid" in criterion, str(criterion)  # TMP
-                assert "size_deg" in criterion, str(criterion)  # TMP
-                grid = criterion["grid"]
-                assert isinstance(grid, COSMOGridDataset), type(grid).__name__  # TMP
-                size_deg = criterion["size_deg"]
-                incr = self._get_traj_mask_any_boundary(grid, float(size_deg))
-                update_mask(mask, incr if criterion["value"] else ~incr)
-            elif criterion["type_"] == "variable":
-                assert "variable" in criterion, str(criterion)  # TMP
-                assert "time_idx" in criterion, str(criterion)  # TMP
-                assert "vmin" in criterion, str(criterion)  # TMP
-                assert "vmax" in criterion, str(criterion)  # TMP
-                variable = criterion["variable"]
-                time_idx = criterion["time_idx"]
-                vmin = criterion["vmin"]
-                vmax = criterion["vmax"]
-                arr = self.get_data(variable, idx_time=time_idx)
-                update_mask(mask, self._get_traj_mask_in_range(arr, vmin, vmax))
-            else:
-                raise ValueError(f"invalid criterion type '{criterion['type_']}'")
+            incr = criterion.apply(self)
+            update_mask(mask, incr)
         return mask
 
     def get_data(
@@ -200,46 +253,6 @@ class TrajDataset:
             data_vars=new_data_vars, coords=self.ds.coords, attrs=self.ds.attrs
         )
         return type(self)(ds=new_ds, **dc.asdict(self.config))
-
-    def _get_traj_mask_full(self, value: bool) -> npt.NDArray[np.bool_]:
-        """Get a trajs mask."""
-        return np.full(self.ds.dims["id"], value, np.bool_)
-
-    def _get_traj_mask_any_incomplete(self) -> npt.NDArray[np.bool_]:
-        """Get 1D mask indicating all trajs with any ``Config.nan`` values."""
-        mask = (self.ds.z.data == self.config.nan).sum(axis=0) > 0
-        # mypy thinks return type is Any (mypy v0.941, numpy v1.22.3)
-        return cast(npt.NDArray[np.bool_], mask)
-
-    def _get_traj_mask_any_boundary(
-        self, grid: COSMOGridDataset, size_deg: float
-    ) -> npt.NDArray[np.bool_]:
-        """Get 1D mask indicating all trajs ever reaching the boundary zone."""
-        llrlon, urrlon, llrlat, urrlat = grid.get_bbox_xy().shrink(size_deg)
-        rlon, rlat = self.ds.longitude.data, self.ds.latitude.data
-        nan_mask = self._get_traj_mask_any_incomplete()
-        rlon_mask = np.where(nan_mask, True, (rlon < llrlon) | (rlon > urrlon))
-        rlat_mask = np.where(nan_mask, True, (rlat < llrlat) | (rlat > urrlat))
-        mask = (rlon_mask | rlat_mask).sum(axis=0) > 0
-        # mypy thinks return type is Any (mypy v0.941, numpy v1.22.3)
-        return cast(npt.NDArray[np.bool_], mask)
-
-    def _get_traj_mask_in_range(
-        self, arr: npt.NDArray[np.float_], vmin: Optional[float], vmax: Optional[float]
-    ) -> npt.NDArray[np.bool_]:
-        """Get a task indicating trajs with a values of ``arr`` in range."""
-        _name_ = "_get_traj_mask_in_range"
-        if n_incomplete := self.count([dict(type_="incomplete", value=True)]):
-            raise NotImplementedError(
-                f"{type(self).__name__}.{_name_} for incomplete trajs"
-                f" ({n_incomplete:,}/{self.count():,})"
-            )
-        mask = self._get_traj_mask_full(True)
-        if vmin is not None:
-            mask &= arr >= vmin
-        if vmax is not None:
-            mask &= arr <= vmax
-        return mask
 
     @classmethod
     def from_file(cls, path: PathLike_T, **config_kwargs: Any) -> TrajDataset:
