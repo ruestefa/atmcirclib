@@ -24,18 +24,39 @@ if TYPE_CHECKING:
 Criteria_T = Collection["Criterion"]
 
 
-class Criterion(abc.ABC):
-    """Base class of criteria to selection trajectories."""
+class _CriterionABC(abc.ABC):
+    """Abstract base class of ``Criterion`` together with ``_CriterionDC``."""
 
     @abc.abstractmethod
     def apply(self, trajs: TrajDataset) -> npt.NDArray[np.bool_]:
         """Apply criterion to trajectories and return 1D mask array."""
         return self.get_mask_full(trajs)
 
+    def invert(self) -> Criterion:
+        """Invert the criterion."""
+        raise NotImplementedError(
+            f"criterion '{type(self).__name__}' is not invertible"
+        )
+
     @staticmethod
     def get_mask_full(trajs: TrajDataset, value: bool = True) -> npt.NDArray[np.bool_]:
         """Get a trajs mask."""
         return np.full(trajs.ds.dims["id"], value, np.bool_)
+
+
+class _CriterionDC:
+    """Dataclass mixin to enable dataclassing subclasses of ABC ``Criterion``.
+
+    This is a workaround for mypy's (0.941) inability to handle dataclasses
+    that inherit directly from ABCs (error: "Only concrete class can be given
+    where "type[Criterion]" is expected"; see
+    https://github.com/python/mypy/issues/5374#issuecomment-568335302).
+
+    """
+
+
+class Criterion(_CriterionDC, _CriterionABC):
+    """Base class of criteria to selection trajectories."""
 
 
 @dc.dataclass
@@ -50,7 +71,7 @@ class VariableCriterion(Criterion):
     def apply(self, trajs: TrajDataset) -> npt.NDArray[np.bool_]:
         """Apply criterion to trajectories and return 1D mask array."""
         arr = trajs.get_data(self.variable, idx_time=self.time_idx)
-        if n_incomplete := trajs.count([IncompleteCriterion()]):
+        if n_incomplete := trajs.count([LeaveDomainCriterion()]):
             raise NotImplementedError(
                 f"{type(self).__name__}.apply for incomplete trajs"
                 f" ({n_incomplete:,}/{trajs.count():,})"
@@ -63,40 +84,75 @@ class VariableCriterion(Criterion):
         return mask
 
 
-# TODO eliminate/improve
-@dc.dataclass
-class IncompleteCriterion(Criterion):
+class LeaveDomainCriterion(Criterion):
     """Select incomplete trajectories that leave the domain."""
-
-    value: bool = True
 
     def apply(self, trajs: TrajDataset) -> npt.NDArray[np.bool_]:
         """Apply criterion to trajectories and return 1D mask array."""
         mask = (trajs.ds.z.data == trajs.config.nan).sum(axis=0) > 0
-        if not self.value:
-            mask = ~mask
         # mypy thinks return type is Any (mypy v0.941, numpy v1.22.3)
         return cast(npt.NDArray[np.bool_], mask)
 
+    def invert(self) -> NotLeaveDomainCriterion:
+        """Invert the criterion."""
+        return NotLeaveDomainCriterion()
 
-# TODO eliminate/improve
-@dc.dataclass
-class BoundaryZoneCriterion(Criterion):
-    """Select trajectories that enter the domain boundary zone at one point."""
 
-    grid: COSMOGridDataset
-    size_deg: float
-    value: bool = True
+class NotLeaveDomainCriterion(Criterion):
+    """Select complete trajectories that stay inside the domain."""
 
     def apply(self, trajs: TrajDataset) -> npt.NDArray[np.bool_]:
         """Apply criterion to trajectories and return 1D mask array."""
+        mask = self.invert().apply(trajs)
+        return ~mask
+
+    def invert(self) -> LeaveDomainCriterion:
+        """Invert the criterion."""
+        return LeaveDomainCriterion()
+
+
+@dc.dataclass
+class _BoundaryZoneCriterion(Criterion):
+    """Base class for invertible ``BoundaryZoneCriterion`` and its inverse."""
+
+    grid: COSMOGridDataset
+    size_deg: float
+
+    # Implementation of abstract method apply necessary to prevent mypy error
+    # (abstract dataclasses not supported; see docstring of ``_CriterionDC``)
+    def apply(self, trajs: TrajDataset) -> npt.NDArray[np.bool_]:
+        """Apply criterion to trajectories and return 1D mask array."""
+        # pylint: disable=W0235  # useless-super-delegation
+        return super().apply(trajs)
+
+
+class BoundaryZoneCriterion(_BoundaryZoneCriterion):
+    """Select trajectories that enter the domain boundary zone at one point."""
+
+    def apply(self, trajs: TrajDataset) -> npt.NDArray[np.bool_]:
+        """Apply criterion to trajectories and return 1D mask array."""
+        # pylint: disable=E1101  # no-member (grid, size_deg)
         llrlon, urrlon, llrlat, urrlat = self.grid.get_bbox_xy().shrink(self.size_deg)
         rlon, rlat = trajs.ds.longitude.data, trajs.ds.latitude.data
-        nan_mask = IncompleteCriterion().apply(trajs)
+        nan_mask = LeaveDomainCriterion().apply(trajs)
         rlon_mask = np.where(nan_mask, True, (rlon < llrlon) | (rlon > urrlon))
         rlat_mask = np.where(nan_mask, True, (rlat < llrlat) | (rlat > urrlat))
         mask = (rlon_mask | rlat_mask).sum(axis=0) > 0
-        if not self.value:
-            mask = ~mask
         # mypy thinks return type is Any (mypy v0.941, numpy v1.22.3)
         return cast(npt.NDArray[np.bool_], mask)
+
+    def invert(self) -> NotBoundaryZoneCriterion:
+        """Invert the criterion."""
+        return NotBoundaryZoneCriterion(**dc.asdict(self))
+
+
+class NotBoundaryZoneCriterion(_BoundaryZoneCriterion):
+    """Select trajectories that never enter the boundary zone."""
+
+    def apply(self, trajs: TrajDataset) -> npt.NDArray[np.bool_]:
+        """Apply criterion to trajectories and return 1D mask array."""
+        return ~self.invert().apply(trajs)
+
+    def invert(self) -> BoundaryZoneCriterion:
+        """Invert the criterion."""
+        return BoundaryZoneCriterion(**dc.asdict(self))

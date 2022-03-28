@@ -16,7 +16,7 @@ import pytest
 from atmcirclib.cosmo import COSMOGridDataset
 from atmcirclib.traj import BoundaryZoneCriterion
 from atmcirclib.traj import Criterion
-from atmcirclib.traj import IncompleteCriterion
+from atmcirclib.traj import LeaveDomainCriterion
 from atmcirclib.traj import TrajDataset
 from atmcirclib.traj import VariableCriterion
 
@@ -282,8 +282,8 @@ class Test_Count:
     def test_incomplete(self) -> None:
         """Count trajs that leave the domain."""
         trajs = TrajDataset(trajs_ds_factory.run())
-        n_incomplete = trajs.count([IncompleteCriterion(True)])
-        n_complete = trajs.count([IncompleteCriterion(False)])
+        n_incomplete = trajs.count([LeaveDomainCriterion()])
+        n_complete = trajs.count([LeaveDomainCriterion().invert()])
         assert n_incomplete == 2
         assert n_complete == 4
 
@@ -293,7 +293,11 @@ class Test_Count:
         """Count trajs that reach the boundary zone."""
         trajs = TrajDataset(trajs_ds_factory.run())
         n_boundary = trajs.count([BoundaryZoneCriterion(grid=GRID_DS, size_deg=1)])
+        n_inner = trajs.count(
+            [BoundaryZoneCriterion(grid=GRID_DS, size_deg=1).invert()]
+        )
         assert n_boundary == 4
+        assert n_inner == 2
 
     @dc.dataclass
     class _TestCountConfig:
@@ -405,7 +409,7 @@ class Test_Count:
     def test_complete(self, cf: _TestCountConfig) -> None:
         """Count only complete trajs trajs that meet the given criteria."""
         trajs = TrajDataset(trajs_ds_factory.run()).select(
-            [IncompleteCriterion(value=False)]
+            [LeaveDomainCriterion().invert()]
         )
         n = trajs.count(
             criteria=cf.criteria,
