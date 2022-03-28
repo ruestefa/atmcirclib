@@ -214,7 +214,10 @@ class ExtendedTrajDataset(TrajDataset):
                 return self.read_start_points()
             except (self.MissingConfigError, FileNotFoundError) as e:
                 if self.config.verbose:
-                    print(f"reading trajs from file filed ({type(e).__name__})")
+                    print(
+                        f"reading trajs from file failed"
+                        f" ({type(e).__name__}('{str(e)}')"
+                    )
         if self.config.verbose:
             print("get start points from trajs")
         points = np.rec.fromarrays(
