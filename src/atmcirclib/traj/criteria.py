@@ -3,8 +3,8 @@ from __future__ import annotations
 
 # Standard library
 import abc
-import dataclasses as dc
 from collections.abc import Collection
+from typing import Any
 from typing import cast
 from typing import Optional
 from typing import TYPE_CHECKING
@@ -24,8 +24,8 @@ if TYPE_CHECKING:
 Criteria_T = Collection["Criterion"]
 
 
-class _CriterionABC(abc.ABC):
-    """Abstract base class of ``Criterion`` together with ``_CriterionDC``."""
+class Criterion(abc.ABC):
+    """Base class of criteria to selection trajectories."""
 
     @abc.abstractmethod
     def apply(self, trajs: TrajDataset) -> npt.NDArray[np.bool_]:
@@ -38,35 +38,31 @@ class _CriterionABC(abc.ABC):
             f"criterion '{type(self).__name__}' is not invertible"
         )
 
+    def dict(self) -> dict[str, Any]:
+        """Return dictionary reprentation with all instantiation arguments."""
+        return {}
+
     @staticmethod
     def get_mask_full(trajs: TrajDataset, value: bool = True) -> npt.NDArray[np.bool_]:
         """Get a trajs mask."""
         return np.full(trajs.ds.dims["id"], value, np.bool_)
 
 
-class _CriterionDC:
-    """Dataclass mixin to enable dataclassing subclasses of ABC ``Criterion``.
-
-    This is a workaround for mypy's (0.941) inability to handle dataclasses
-    that inherit directly from ABCs (error: "Only concrete class can be given
-    where "type[Criterion]" is expected"; see
-    https://github.com/python/mypy/issues/5374#issuecomment-568335302).
-
-    """
-
-
-class Criterion(_CriterionDC, _CriterionABC):
-    """Base class of criteria to selection trajectories."""
-
-
-@dc.dataclass
 class VariableCriterion(Criterion):
     """Select trajectories based on a traced variable."""
 
-    variable: str
-    time_idx: int
-    vmin: Optional[float] = None
-    vmax: Optional[float] = None
+    def __init__(
+        self,
+        variable: str,
+        time_idx: int,
+        vmin: Optional[float] = None,
+        vmax: Optional[float] = None,
+    ) -> None:
+        """Create a new instance."""
+        self.variable: str = variable
+        self.time_idx: int = time_idx
+        self.vmin: Optional[float] = vmin
+        self.vmax: Optional[float] = vmax
 
     def apply(self, trajs: TrajDataset) -> npt.NDArray[np.bool_]:
         """Apply criterion to trajectories and return 1D mask array."""
@@ -111,19 +107,20 @@ class NotLeaveDomainCriterion(Criterion):
         return LeaveDomainCriterion()
 
 
-@dc.dataclass
 class _BoundaryZoneCriterion(Criterion):
     """Base class for invertible ``BoundaryZoneCriterion`` and its inverse."""
 
-    grid: COSMOGridDataset
-    size_deg: float
+    def __init__(self, grid: COSMOGridDataset, size_deg: float) -> None:
+        """Create a new instance."""
+        self.grid: COSMOGridDataset = grid
+        self.size_deg: float = size_deg
 
-    # Implementation of abstract method apply necessary to prevent mypy error
-    # (abstract dataclasses not supported; see docstring of ``_CriterionDC``)
-    def apply(self, trajs: TrajDataset) -> npt.NDArray[np.bool_]:
-        """Apply criterion to trajectories and return 1D mask array."""
-        # pylint: disable=W0235  # useless-super-delegation
-        return super().apply(trajs)
+    def dict(self) -> dict[str, Any]:
+        """Return dictionary representation with all instantiation arguments."""
+        return {
+            "grid": self.grid,
+            "size_deg": self.size_deg,
+        }
 
 
 class BoundaryZoneCriterion(_BoundaryZoneCriterion):
@@ -143,7 +140,7 @@ class BoundaryZoneCriterion(_BoundaryZoneCriterion):
 
     def invert(self) -> NotBoundaryZoneCriterion:
         """Invert the criterion."""
-        return NotBoundaryZoneCriterion(**dc.asdict(self))
+        return NotBoundaryZoneCriterion(**self.dict())
 
 
 class NotBoundaryZoneCriterion(_BoundaryZoneCriterion):
@@ -155,4 +152,4 @@ class NotBoundaryZoneCriterion(_BoundaryZoneCriterion):
 
     def invert(self) -> BoundaryZoneCriterion:
         """Invert the criterion."""
-        return BoundaryZoneCriterion(**dc.asdict(self))
+        return BoundaryZoneCriterion(**self.dict())
