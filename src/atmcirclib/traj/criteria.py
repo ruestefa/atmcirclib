@@ -3,7 +3,8 @@ from __future__ import annotations
 
 # Standard library
 import abc
-from collections.abc import Collection
+from collections import UserList
+from collections.abc import Sequence
 from typing import Any
 from typing import cast
 from typing import Optional
@@ -19,9 +20,6 @@ from atmcirclib.cosmo import COSMOGridDataset
 if TYPE_CHECKING:
     # Local
     from .traj_dataset import TrajDataset
-
-# Custom types
-Criteria_T = Collection["Criterion"]
 
 
 class Criterion(abc.ABC):
@@ -40,6 +38,7 @@ class Criterion(abc.ABC):
 
     def dict(self) -> dict[str, Any]:
         """Return dictionary reprentation with all instantiation arguments."""
+        # pylint: disable=R0201  # no-self-use
         return {}
 
     @staticmethod
@@ -67,7 +66,7 @@ class VariableCriterion(Criterion):
     def apply(self, trajs: TrajDataset) -> npt.NDArray[np.bool_]:
         """Apply criterion to trajectories and return 1D mask array."""
         arr = trajs.get_data(self.variable, idx_time=self.time_idx)
-        if n_incomplete := trajs.count([LeaveDomainCriterion()]):
+        if n_incomplete := trajs.count(Criteria([LeaveDomainCriterion()])):
             raise NotImplementedError(
                 f"{type(self).__name__}.apply for incomplete trajs"
                 f" ({n_incomplete:,}/{trajs.count():,})"
@@ -128,7 +127,6 @@ class BoundaryZoneCriterion(_BoundaryZoneCriterion):
 
     def apply(self, trajs: TrajDataset) -> npt.NDArray[np.bool_]:
         """Apply criterion to trajectories and return 1D mask array."""
-        # pylint: disable=E1101  # no-member (grid, size_deg)
         llrlon, urrlon, llrlat, urrlat = self.grid.get_bbox_xy().shrink(self.size_deg)
         rlon, rlat = trajs.ds.longitude.data, trajs.ds.latitude.data
         nan_mask = LeaveDomainCriterion().apply(trajs)
@@ -153,3 +151,12 @@ class NotBoundaryZoneCriterion(_BoundaryZoneCriterion):
     def invert(self) -> BoundaryZoneCriterion:
         """Invert the criterion."""
         return BoundaryZoneCriterion(**self.dict())
+
+
+# pylint: disable=R0901  # too-many-ancestors (>7)
+class Criteria(UserList[Criterion]):
+    """A set of combined criteria to select trajectories."""
+
+    def __init__(self, criteria: Optional[Sequence[Criterion]]) -> None:
+        """Create a new instance."""
+        super().__init__(criteria)

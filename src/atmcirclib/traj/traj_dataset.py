@@ -20,7 +20,7 @@ from atmcirclib.typing import NDIndex_T
 from atmcirclib.typing import PathLike_T
 
 # Local
-from .criteria import Criteria_T
+from .criteria import Criteria
 from .criteria import Criterion
 
 
@@ -49,9 +49,7 @@ class TrajDataset:
         self.config: TrajDataset.Config = self.Config(**config_kwargs)
         self.ds: xr.Dataset = ds
 
-    def count(
-        self, criteria: Optional[Criteria_T] = None, **addtl_criteria: Any
-    ) -> int:
+    def count(self, criteria: Optional[Criteria] = None, **addtl_criteria: Any) -> int:
         """Count all trajs that fulfill the given criteria.
 
         See docstring of ``get_traj_mask`` for details on the criteria.
@@ -61,7 +59,7 @@ class TrajDataset:
         return cast(int, self.get_traj_mask(criteria, **addtl_criteria).sum())
 
     def select(
-        self, criteria: Optional[Criteria_T] = None, **addtl_criteria: Any
+        self, criteria: Optional[Criteria] = None, **addtl_criteria: Any
     ) -> TrajDataset:
         """Return a copy with only those trajs that fulfill the given criteria.
 
@@ -73,7 +71,7 @@ class TrajDataset:
 
     def get_traj_mask(
         self,
-        criteria: Optional[Criteria_T] = None,
+        criteria: Optional[Criteria] = None,
         *,
         require_all: bool = True,
     ) -> npt.NDArray[np.bool_]:
@@ -220,7 +218,7 @@ class ExtendedTrajDataset(TrajDataset):
         super().__init__(ds, **config_kwargs)
 
     def remove(
-        self, criteria: Optional[Criteria_T] = None, **addtl_criteria: Any
+        self, criteria: Optional[Criteria] = None, **addtl_criteria: Any
     ) -> TrajDataset:
         """Return a copy without those trajs that fulfill the given criteria.
 
@@ -231,7 +229,7 @@ class ExtendedTrajDataset(TrajDataset):
         return self._without_masked(mask)
 
     def discount(
-        self, criteria: Optional[Criteria_T] = None, **addtl_criteria: Any
+        self, criteria: Optional[Criteria] = None, **addtl_criteria: Any
     ) -> int:
         """Count all trajs that don't fulfill the given criteria.
 

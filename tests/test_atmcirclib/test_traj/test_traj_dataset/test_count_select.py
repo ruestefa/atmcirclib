@@ -3,7 +3,6 @@ from __future__ import annotations
 
 # Standard library
 import dataclasses as dc
-from collections.abc import Collection
 from typing import Any
 from typing import cast
 
@@ -15,7 +14,7 @@ import pytest
 # First-party
 from atmcirclib.cosmo import COSMOGridDataset
 from atmcirclib.traj import BoundaryZoneCriterion
-from atmcirclib.traj import Criterion
+from atmcirclib.traj import Criteria
 from atmcirclib.traj import LeaveDomainCriterion
 from atmcirclib.traj import TrajDataset
 from atmcirclib.traj import VariableCriterion
@@ -282,8 +281,8 @@ class Test_Count:
     def test_incomplete(self) -> None:
         """Count trajs that leave the domain."""
         trajs = TrajDataset(trajs_ds_factory.run())
-        n_incomplete = trajs.count([LeaveDomainCriterion()])
-        n_complete = trajs.count([LeaveDomainCriterion().invert()])
+        n_incomplete = trajs.count(Criteria([LeaveDomainCriterion()]))
+        n_complete = trajs.count(Criteria([LeaveDomainCriterion().invert()]))
         assert n_incomplete == 2
         assert n_complete == 4
 
@@ -292,9 +291,11 @@ class Test_Count:
     def test_boundary(self) -> None:
         """Count trajs that reach the boundary zone."""
         trajs = TrajDataset(trajs_ds_factory.run())
-        n_boundary = trajs.count([BoundaryZoneCriterion(grid=GRID_DS, size_deg=1)])
+        n_boundary = trajs.count(
+            Criteria([BoundaryZoneCriterion(grid=GRID_DS, size_deg=1)])
+        )
         n_inner = trajs.count(
-            [BoundaryZoneCriterion(grid=GRID_DS, size_deg=1).invert()]
+            Criteria([BoundaryZoneCriterion(grid=GRID_DS, size_deg=1).invert()])
         )
         assert n_boundary == 4
         assert n_inner == 2
@@ -303,7 +304,7 @@ class Test_Count:
     class _TestCountConfig:
         """Configuration of ``test_z``."""
 
-        criteria: Collection[Criterion]
+        criteria: Criteria
         require_all: bool = True
         n: int = -1
 
@@ -311,96 +312,110 @@ class Test_Count:
         "cf",
         [
             _TestCountConfig(  # cf[0]
-                criteria=[],
+                criteria=Criteria([]),
                 n=4,
             ),
             _TestCountConfig(  # cf[1]
-                criteria=[
-                    VariableCriterion(
-                        variable="z",
-                        time_idx=0,
-                        vmin=3000,
-                        vmax=None,
-                    ),
-                ],
+                criteria=Criteria(
+                    [
+                        VariableCriterion(
+                            variable="z",
+                            time_idx=0,
+                            vmin=3000,
+                            vmax=None,
+                        ),
+                    ]
+                ),
                 n=2,
             ),
             _TestCountConfig(  # cf[2]
-                criteria=[
-                    VariableCriterion(
-                        variable="z",
-                        time_idx=6,
-                        vmin=None,
-                        vmax=9000,
-                    ),
-                ],
+                criteria=Criteria(
+                    [
+                        VariableCriterion(
+                            variable="z",
+                            time_idx=6,
+                            vmin=None,
+                            vmax=9000,
+                        ),
+                    ]
+                ),
                 n=3,
             ),
             _TestCountConfig(  # cf[3]
-                criteria=[
-                    VariableCriterion(
-                        variable="z",
-                        time_idx=-3,
-                        vmin=7500,
-                        vmax=85000,
-                    ),
-                ],
+                criteria=Criteria(
+                    [
+                        VariableCriterion(
+                            variable="z",
+                            time_idx=-3,
+                            vmin=7500,
+                            vmax=85000,
+                        ),
+                    ]
+                ),
                 n=2,
             ),
             _TestCountConfig(  # cf[4]
-                criteria=[
-                    VariableCriterion(
-                        variable="UV",
-                        time_idx=5,
-                        vmin=100,
-                        vmax=None,
-                    ),
-                ],
+                criteria=Criteria(
+                    [
+                        VariableCriterion(
+                            variable="UV",
+                            time_idx=5,
+                            vmin=100,
+                            vmax=None,
+                        ),
+                    ]
+                ),
                 n=1,
             ),
             _TestCountConfig(  # cf[5]
-                criteria=[
-                    VariableCriterion(
-                        variable="UV",
-                        time_idx=3,
-                        vmin=20,
-                        vmax=70,
-                    ),
-                ],
+                criteria=Criteria(
+                    [
+                        VariableCriterion(
+                            variable="UV",
+                            time_idx=3,
+                            vmin=20,
+                            vmax=70,
+                        ),
+                    ]
+                ),
                 n=2,
             ),
             _TestCountConfig(  # cf[6]
-                criteria=[
-                    VariableCriterion(
-                        variable="z",
-                        time_idx=-1,
-                        vmin=8000,
-                        vmax=None,
-                    ),
-                    VariableCriterion(
-                        variable="UV",
-                        time_idx=-1,
-                        vmin=30,
-                        vmax=None,
-                    ),
-                ],
+                criteria=Criteria(
+                    [
+                        VariableCriterion(
+                            variable="z",
+                            time_idx=-1,
+                            vmin=8000,
+                            vmax=None,
+                        ),
+                        VariableCriterion(
+                            variable="UV",
+                            time_idx=-1,
+                            vmin=30,
+                            vmax=None,
+                        ),
+                    ]
+                ),
                 n=2,
             ),
             _TestCountConfig(  # cf[7]
-                criteria=[
-                    VariableCriterion(
-                        variable="z",
-                        time_idx=-1,
-                        vmin=8000,
-                        vmax=None,
-                    ),
-                    VariableCriterion(
-                        variable="UV",
-                        time_idx=-1,
-                        vmin=30,
-                        vmax=None,
-                    ),
-                ],
+                criteria=Criteria(
+                    [
+                        VariableCriterion(
+                            variable="z",
+                            time_idx=-1,
+                            vmin=8000,
+                            vmax=None,
+                        ),
+                        VariableCriterion(
+                            variable="UV",
+                            time_idx=-1,
+                            vmin=30,
+                            vmax=None,
+                        ),
+                    ]
+                ),
                 require_all=False,
                 n=3,
             ),
@@ -409,7 +424,7 @@ class Test_Count:
     def test_complete(self, cf: _TestCountConfig) -> None:
         """Count only complete trajs trajs that meet the given criteria."""
         trajs = TrajDataset(trajs_ds_factory.run()).select(
-            [LeaveDomainCriterion().invert()]
+            Criteria([LeaveDomainCriterion().invert()])
         )
         n = trajs.count(
             criteria=cf.criteria,
