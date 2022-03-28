@@ -448,9 +448,9 @@ class Test_Count:
         )
         in_domain_criteria = Criteria([LeaveDomainCriterion().invert()])
         trajs = TrajDataset(trajs_ds_factory.run()).select(in_domain_criteria)
-        assert trajs.count(criteria=criteria) == 2
-        assert trajs.discount(criteria=criteria) == 2
-        assert trajs.count(criteria=criteria.derive(require_all=False)) == 3
-        assert trajs.discount(criteria=criteria.derive(require_all=False)) == 1
-        assert trajs.count(criteria=criteria.derive(require_all=False).invert()) == 1
-        assert trajs.discount(criteria=criteria.derive(require_all=False).invert()) == 3
+        assert trajs.count(criteria) == 2
+        assert trajs.discount(criteria) == 2
+        assert trajs.count(criteria.derive(require_all=False)) == 3
+        assert trajs.discount(criteria.derive(require_all=False)) == 1
+        assert trajs.count(criteria.derive(require_all=False).invert()) == 1
+        assert trajs.discount(criteria.derive(require_all=False).invert()) == 3
