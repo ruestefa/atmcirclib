@@ -49,71 +49,46 @@ class TrajDataset:
         self.config: TrajDataset.Config = self.Config(**config_kwargs)
         self.ds: xr.Dataset = ds
 
-    def count(self, criteria: Optional[Criteria] = None, **addtl_criteria: Any) -> int:
+    def count(self, criteria: Optional[Criteria] = None) -> int:
         """Count all trajs that fulfill the given criteria.
 
         See docstring of ``get_traj_mask`` for details on the criteria.
 
         """
         # mypy thinks return type is Any (mypy v0.941, numpy v1.22.3)
-        return cast(int, self.get_traj_mask(criteria, **addtl_criteria).sum())
+        return cast(int, self.get_traj_mask(criteria).sum())
 
-    def select(
-        self, criteria: Optional[Criteria] = None, **addtl_criteria: Any
-    ) -> TrajDataset:
+    def select(self, criteria: Optional[Criteria] = None) -> TrajDataset:
         """Return a copy with only those trajs that fulfill the given criteria.
 
         See docstring of ``get_traj_mask`` for details on the criteria.
 
         """
-        mask = self.get_traj_mask(criteria, **addtl_criteria)
+        mask = self.get_traj_mask(criteria)
         return self._without_masked(~mask)
 
     def get_traj_mask(
         self,
         criteria: Optional[Criteria] = None,
-        *,
-        require_all: bool = True,
     ) -> npt.NDArray[np.bool_]:
-        """Get a mask indicating which trajs fulfill a combination of criteria.
-
-        Args:
-            criteria (optional): A set of critiera dicts (see below).
-
-            require_all (optional): Only select trajs that fulfil all given
-                criteria; otherwise, any one given criterion is sufficient.
-
-        Criteria:
-            incomplete (optional): Select trajs that are incomplete because they
-                contain missing values, which is the case when they leave the
-                domain; note that these are necessary a subset of those selected
-                with ``boundary=True``.
-
-            boundary (optional): Select trajs that enter the boundary zone
-                (defined by ``Config.boundary_size_km``) at some point.
-
-            z (optional): Select trajs that at a given time step are located in
-                a given height range.
-
-            UV (optional): Select trajs that at a given time step exhibit wind
-                speed in a given range.
-
-        """
+        """Get a mask indicating which trajs fulfill a combination of criteria."""
 
         def update_mask(
-            mask: npt.NDArray[np.bool_], incr: npt.NDArray[np.bool_]
+            mask: npt.NDArray[np.bool_], criterion: Criterion, require_all: bool
         ) -> None:
             """Update mask depending on ``require_all``."""
+            incr = criterion.apply(self)
             if require_all:
                 mask[:] &= incr
             else:
                 mask[:] |= incr
 
-        mask = Criterion.get_mask_full(self, value=require_all)
-        criterion: Criterion
-        for criterion in criteria or []:
-            incr = criterion.apply(self)
-            update_mask(mask, incr)
+        if criteria is None:
+            mask = Criterion.get_mask_full(self, value=True)
+        else:
+            mask = Criterion.get_mask_full(self, value=criteria.require_all)
+            for criterion in criteria:
+                update_mask(mask, criterion, criteria.require_all)
         return mask
 
     def get_data(
@@ -217,26 +192,22 @@ class ExtendedTrajDataset(TrajDataset):
         self.config: ExtendedTrajDataset.Config
         super().__init__(ds, **config_kwargs)
 
-    def remove(
-        self, criteria: Optional[Criteria] = None, **addtl_criteria: Any
-    ) -> TrajDataset:
+    def remove(self, criteria: Optional[Criteria] = None) -> TrajDataset:
         """Return a copy without those trajs that fulfill the given criteria.
 
         See docstring of ``get_traj_mask`` for details on the criteria.
 
         """
-        mask = self.get_traj_mask(criteria, **addtl_criteria)
+        mask = self.get_traj_mask(criteria)
         return self._without_masked(mask)
 
-    def discount(
-        self, criteria: Optional[Criteria] = None, **addtl_criteria: Any
-    ) -> int:
+    def discount(self, criteria: Optional[Criteria] = None) -> int:
         """Count all trajs that don't fulfill the given criteria.
 
         See docstring of ``get_traj_mask`` for details on the criteria.
 
         """
-        return self.count() - self.count(criteria, **addtl_criteria)
+        return self.count() - self.count(criteria)
 
     # Note: Typing return array as npt.NDArray[np.float_] leads to overload error
     # when accessing fields by name (e.g., points["x"]) (numpy v1.22.2)

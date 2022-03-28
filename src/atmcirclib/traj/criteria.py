@@ -157,6 +157,20 @@ class NotBoundaryZoneCriterion(_BoundaryZoneCriterion):
 class Criteria(UserList[Criterion]):
     """A set of combined criteria to select trajectories."""
 
-    def __init__(self, criteria: Optional[Sequence[Criterion]]) -> None:
-        """Create a new instance."""
+    def __init__(
+        self,
+        criteria: Optional[Sequence[Criterion]] = None,
+        *,
+        require_all: bool = True,
+    ) -> None:
+        """Create a new instance.
+
+        Args:
+            criteria (optional): Individual criteria.
+
+            require_all (optional): Whether selected trajectories must fulfill
+                all criteria at once or only one.
+
+        """
         super().__init__(criteria)
+        self.require_all: bool = require_all

@@ -305,7 +305,6 @@ class Test_Count:
         """Configuration of ``test_z``."""
 
         criteria: Criteria
-        require_all: bool = True
         n: int = -1
 
     @pytest.mark.parametrize(
@@ -414,9 +413,9 @@ class Test_Count:
                             vmin=30,
                             vmax=None,
                         ),
-                    ]
+                    ],
+                    require_all=False,
                 ),
-                require_all=False,
                 n=3,
             ),
         ],
@@ -426,8 +425,5 @@ class Test_Count:
         trajs = TrajDataset(trajs_ds_factory.run()).select(
             Criteria([LeaveDomainCriterion().invert()])
         )
-        n = trajs.count(
-            criteria=cf.criteria,
-            require_all=cf.require_all,
-        )
+        n = trajs.count(criteria=cf.criteria)
         assert n == cf.n
