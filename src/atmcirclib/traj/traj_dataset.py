@@ -22,6 +22,7 @@ from atmcirclib.typing import PathLike_T
 # Local
 from .criteria import Criteria
 from .criteria import Criterion
+from .traj_start_dataset import TrajStartDataset
 
 
 class TrajDataset:
@@ -137,6 +138,12 @@ class TrajDataset:
             arr[arr == self.config.nan] = np.nan
         return arr
 
+    def get_start_points(
+        self,
+    ) -> TrajStartDataset:
+        """Get start points."""
+        return TrajStartDataset.from_trajs(self)
+
     def _without_masked(self, mask: npt.NDArray[np.bool_]) -> TrajDataset:
         """Return a copy without those trajs indicated in the mask."""
         new_data_vars: dict[str, xr.DataArray] = {}
@@ -177,19 +184,7 @@ class ExtendedTrajDataset(TrajDataset):
 
     @dc.dataclass
     class Config(TrajDataset.Config):
-        """Configuration.
-
-        Properties:
-
-            start_file: Path to text file with start points; required to provide
-                start points, e.g., to a plotting routine to choose proper bins.
-
-            start_file_header: Number of header lines in start file.
-
-        """
-
-        start_file: Optional[PathLike_T] = None
-        start_file_header: int = 3
+        """Configuration."""
 
     def __init__(
         self,
@@ -199,84 +194,6 @@ class ExtendedTrajDataset(TrajDataset):
         """Create a new instance."""
         self.config: ExtendedTrajDataset.Config
         super().__init__(ds, **config_kwargs)
-
-    # Note: Typing return array as npt.NDArray[np.float_] leads to overload error
-    # when accessing fields by name (e.g., points["x"]) (numpy v1.22.2)
-    def get_start_points(self, try_file: bool = False) -> npt.NDArray[Any]:
-        """Get start points from trajs as a structured array.
-
-        Args:
-            try_file (optional): Try first to read start points from file.
-
-        """
-        if try_file:
-            try:
-                return self.read_start_points()
-            except (self.MissingConfigError, FileNotFoundError) as e:
-                if self.config.verbose:
-                    print(
-                        f"reading trajs from file failed"
-                        f" ({type(e).__name__}('{str(e)}')"
-                    )
-        if self.config.verbose:
-            print("get start points from trajs")
-        points = np.rec.fromarrays(
-            [self.ds.longitude.data[0], self.ds.latitude.data[0], self.ds.z.data[0]],
-            dtype=[("lon", "f4"), ("lat", "f4"), ("z", "f4")],
-        )
-        return np.unique(points)
-
-    # Note: Typing return array as npt.NDArray[np.float_] leads to overload error
-    # when accessing fields by name (e.g., points["x"]) (numpy v1.22.2)
-    def read_start_points(self) -> npt.NDArray[Any]:
-        """Read start points from ``Config.start_file`` as a structured array."""
-        if self.config.start_file is None:
-            raise self.MissingConfigError("start_file")
-        if self.config.verbose:
-            print(f"read traj start points from {self.config.start_file}")
-        return np.loadtxt(
-            self.config.start_file,
-            skiprows=self.config.start_file_header,
-            dtype=[("lon", "f4"), ("lat", "f4"), ("z", "f4")],
-        )
-
-    def get_start_point_bin_edges(
-        self, *, try_file: bool = True, extrapolate: bool = True
-    ) -> tuple[npt.NDArray[np.float_], npt.NDArray[np.float_], npt.NDArray[np.float_]]:
-        """Compute bins in (lon, lat, z) from trajs start points.
-
-        They correspond to the mid-points between successive points, plus an
-        optional end point obtained by extrapolation.
-
-        Args:
-            try_file (optional): Try first to read start points from file.
-
-            extrapolate (optional): Add additional bins in the beginning and
-                end that include the first and last point, respectively, along
-                each dimension.
-
-        """
-
-        def centers_to_edges(centers: npt.NDArray[np.float_]) -> npt.NDArray[np.float_]:
-            """Obtain bin boundaries between points."""
-            inner_edges = np.mean([centers[:-1], centers[1:]], axis=0)
-            if not extrapolate:
-                edges = inner_edges
-            else:
-                edges = np.r_[
-                    centers[0] - (inner_edges[0] - centers[0]),
-                    inner_edges,
-                    centers[-1] + (centers[-1] - inner_edges[-1]),
-                ]
-            # mypy thinks return type is Any (mypy v0.941, numpy v1.22.3)
-            return cast(npt.NDArray[np.float_], edges)
-
-        points = self.get_start_points(try_file=try_file)
-        return (
-            centers_to_edges(np.sort(np.unique(points["lon"]))),
-            centers_to_edges(np.sort(np.unique(points["lat"]))),
-            centers_to_edges(np.sort(np.unique(points["z"]))),
-        )
 
     def get_dt_ref(self) -> dt.datetime:
         """Get reference datetime (start of the simulation)."""
