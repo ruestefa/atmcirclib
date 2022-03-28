@@ -35,12 +35,12 @@ class Criterion(abc.ABC):
     @abc.abstractmethod
     def apply(self, trajs: TrajDataset) -> npt.NDArray[np.bool_]:
         """Apply criterion to trajectories and return 1D mask array."""
-        return self.get_mask_full(trajs)
+        ...
 
     @abc.abstractmethod
     def invert(self) -> Criterion:
         """Invert the criterion."""
-        raise NotImplementedError(f"'{type(self).__name__}' is not invertible")
+        ...
 
     def dict(self) -> dict[str, Any]:
         """Return dictionary reprentation with all instantiation arguments."""
@@ -59,6 +59,30 @@ class Criterion(abc.ABC):
     def get_mask_full(trajs: TrajDataset, value: bool = True) -> npt.NDArray[np.bool_]:
         """Get a trajs mask."""
         return np.full(trajs.ds.dims["id"], value, np.bool_)
+
+
+class AllCriterion(Criterion):
+    """Select all trajectories."""
+
+    def apply(self, trajs: TrajDataset) -> npt.NDArray[np.bool_]:
+        """Apply criterion to trajectories and return 1D mask array."""
+        return self.get_mask_full(trajs)
+
+    def invert(self) -> InvertedAllCriterion:
+        """Invert the criterion."""
+        return InvertedAllCriterion()
+
+
+class InvertedAllCriterion(Criterion):
+    """Select no trajectories."""
+
+    def apply(self, trajs: TrajDataset) -> npt.NDArray[np.bool_]:
+        """Apply criterion to trajectories and return 1D mask array."""
+        return ~self.invert().apply(trajs)
+
+    def invert(self) -> AllCriterion:
+        """Invert the criterion."""
+        return AllCriterion()
 
 
 class _VariableCriterion(Criterion):
@@ -109,12 +133,12 @@ class VariableCriterion(_VariableCriterion):
             mask &= arr <= self.vmax
         return mask
 
-    def invert(self) -> NotVariableCriterion:
+    def invert(self) -> InvertedVariableCriterion:
         """Invert the criterion."""
-        return NotVariableCriterion(**self.dict())
+        return InvertedVariableCriterion(**self.dict())
 
 
-class NotVariableCriterion(_VariableCriterion):
+class InvertedVariableCriterion(_VariableCriterion):
     """Select trajectories that don't meet the trace variable conditions."""
 
     def apply(self, trajs: TrajDataset) -> npt.NDArray[np.bool_]:
@@ -135,12 +159,12 @@ class LeaveDomainCriterion(Criterion):
         # mypy thinks return type is Any (mypy v0.941, numpy v1.22.3)
         return cast(npt.NDArray[np.bool_], mask)
 
-    def invert(self) -> NotLeaveDomainCriterion:
+    def invert(self) -> InvertedLeaveDomainCriterion:
         """Invert the criterion."""
-        return NotLeaveDomainCriterion()
+        return InvertedLeaveDomainCriterion()
 
 
-class NotLeaveDomainCriterion(Criterion):
+class InvertedLeaveDomainCriterion(Criterion):
     """Select complete trajectories that stay inside the domain."""
 
     def apply(self, trajs: TrajDataset) -> npt.NDArray[np.bool_]:
@@ -186,12 +210,12 @@ class BoundaryZoneCriterion(_BoundaryZoneCriterion):
         # mypy thinks return type is Any (mypy v0.941, numpy v1.22.3)
         return cast(npt.NDArray[np.bool_], mask)
 
-    def invert(self) -> NotBoundaryZoneCriterion:
+    def invert(self) -> InvertedBoundaryZoneCriterion:
         """Invert the criterion."""
-        return NotBoundaryZoneCriterion(**self.dict())
+        return InvertedBoundaryZoneCriterion(**self.dict())
 
 
-class NotBoundaryZoneCriterion(_BoundaryZoneCriterion):
+class InvertedBoundaryZoneCriterion(_BoundaryZoneCriterion):
     """Select trajectories that never enter the boundary zone."""
 
     def apply(self, trajs: TrajDataset) -> npt.NDArray[np.bool_]:

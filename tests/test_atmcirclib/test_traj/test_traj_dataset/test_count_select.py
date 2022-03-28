@@ -13,11 +13,12 @@ import pytest
 
 # First-party
 from atmcirclib.cosmo import COSMOGridDataset
-from atmcirclib.traj import BoundaryZoneCriterion
 from atmcirclib.traj import Criteria
-from atmcirclib.traj import LeaveDomainCriterion
 from atmcirclib.traj import TrajDataset
-from atmcirclib.traj import VariableCriterion
+from atmcirclib.traj.criteria import AllCriterion
+from atmcirclib.traj.criteria import BoundaryZoneCriterion
+from atmcirclib.traj.criteria import LeaveDomainCriterion
+from atmcirclib.traj.criteria import VariableCriterion
 
 # Local
 from .shared import create_cosmo_grid_dataset_ds
@@ -454,3 +455,5 @@ class Test_Count:
         assert trajs.discount(criteria.derive(require_all=False)) == 1
         assert trajs.count(criteria.derive(require_all=False).invert()) == 1
         assert trajs.discount(criteria.derive(require_all=False).invert()) == 3
+        all_criteria = Criteria([AllCriterion()])
+        assert trajs.discount(all_criteria.invert()) == trajs.count(all_criteria)
