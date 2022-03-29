@@ -3,6 +3,7 @@ from __future__ import annotations
 
 # Standard library
 import abc
+import dataclasses as dc
 from collections import UserList
 from collections.abc import Sequence
 from typing import Any
@@ -51,6 +52,16 @@ class Criterion(abc.ABC):
         """Invert the criterion."""
         ...
 
+    @abc.abstractmethod
+    def _format_file(self) -> str:
+        """Format to string suitable for file names."""
+        ...
+
+    @abc.abstractmethod
+    def _format_human(self) -> str:
+        """Format to string suitable for humans (e.g., title)."""
+        ...
+
     def dict(self) -> dict[str, Any]:
         """Return dictionary reprentation with all instantiation arguments."""
         # pylint: disable=R0201  # no-self-use
@@ -81,6 +92,14 @@ class AllCriterion(Criterion):
         """Invert the criterion."""
         return InvertedAllCriterion()
 
+    def _format_file(self) -> str:
+        """Format to string suitable for file names."""
+        return "all"
+
+    def _format_human(self) -> str:
+        """Format to string suitable for humans (e.g., title)."""
+        return "all"
+
 
 class InvertedAllCriterion(Criterion):
     """Select no trajectories."""
@@ -92,6 +111,14 @@ class InvertedAllCriterion(Criterion):
     def invert(self) -> AllCriterion:
         """Invert the criterion."""
         return AllCriterion()
+
+    def _format_file(self) -> str:
+        """Format to string suitable for file names."""
+        return "none"
+
+    def _format_human(self) -> str:
+        """Format to string suitable for humans (e.g., title)."""
+        return "none"
 
 
 class _VariableCriterion(Criterion):
@@ -146,6 +173,22 @@ class VariableCriterion(_VariableCriterion):
         """Invert the criterion."""
         return InvertedVariableCriterion(**self.dict())
 
+    def _format_file(self) -> str:
+        """Format to string suitable for file names."""
+        return VariableRangeFormatter(
+            name=self.variable,
+            vmin=self.vmin,
+            vmax=self.vmax,
+        ).format_file()
+
+    def _format_human(self) -> str:
+        """Format to string suitable for humans (e.g., title)."""
+        return VariableRangeFormatter(
+            name=self.variable,
+            vmin=self.vmin,
+            vmax=self.vmax,
+        ).format_human()
+
 
 class InvertedVariableCriterion(_VariableCriterion):
     """Select trajectories that don't meet the trace variable conditions."""
@@ -157,6 +200,16 @@ class InvertedVariableCriterion(_VariableCriterion):
     def invert(self) -> VariableCriterion:
         """Invert the criterion."""
         return VariableCriterion(**self.dict())
+
+    def _format_file(self) -> str:
+        """Format to string suitable for file names."""
+        # pylint: disable=W0212  # protected-access (Criterion._format_file)
+        return f"not-{self.invert()._format_file()}"
+
+    def _format_human(self) -> str:
+        """Format to string suitable for humans (e.g., title)."""
+        # pylint: disable=W0212  # protected-access (Criterion._format_human)
+        return f"not {self.invert()._format_human()}"
 
 
 class LeaveDomainCriterion(Criterion):
@@ -172,6 +225,14 @@ class LeaveDomainCriterion(Criterion):
         """Invert the criterion."""
         return InvertedLeaveDomainCriterion()
 
+    def _format_file(self) -> str:
+        """Format to string suitable for file names."""
+        return "leaving-domain"
+
+    def _format_human(self) -> str:
+        """Format to string suitable for humans (e.g., title)."""
+        return "leaving domain"
+
 
 class InvertedLeaveDomainCriterion(Criterion):
     """Select complete trajectories that stay inside the domain."""
@@ -183,6 +244,14 @@ class InvertedLeaveDomainCriterion(Criterion):
     def invert(self) -> LeaveDomainCriterion:
         """Invert the criterion."""
         return LeaveDomainCriterion()
+
+    def _format_file(self) -> str:
+        """Format to string suitable for file names."""
+        return "never-leaving-domain"
+
+    def _format_human(self) -> str:
+        """Format to string suitable for humans (e.g., title)."""
+        return "never leaving domain"
 
 
 class _BoundaryZoneCriterion(Criterion):
@@ -223,6 +292,14 @@ class BoundaryZoneCriterion(_BoundaryZoneCriterion):
         """Invert the criterion."""
         return InvertedBoundaryZoneCriterion(**self.dict())
 
+    def _format_file(self) -> str:
+        """Format to string suitable for file names."""
+        return "in-boundary-zone"
+
+    def _format_human(self) -> str:
+        """Format to string suitable for humans (e.g., title)."""
+        return "in boundary zone"
+
 
 class InvertedBoundaryZoneCriterion(_BoundaryZoneCriterion):
     """Select trajectories that never enter the boundary zone."""
@@ -234,6 +311,14 @@ class InvertedBoundaryZoneCriterion(_BoundaryZoneCriterion):
     def invert(self) -> BoundaryZoneCriterion:
         """Invert the criterion."""
         return BoundaryZoneCriterion(**self.dict())
+
+    def _format_file(self) -> str:
+        """Format to string suitable for file names."""
+        return "never-in-boundary-zone"
+
+    def _format_human(self) -> str:
+        """Format to string suitable for humans (e.g., title)."""
+        return "never in boundary zone"
 
 
 # pylint: disable=R0901  # too-many-ancestors (>7)
@@ -284,3 +369,61 @@ class Criteria(UserList[Criterion]):
             "criteria": list(self),
             "require_all": self.require_all,
         }
+
+
+@dc.dataclass
+class VariableRangeFormatter:
+    """Format a variable with a range given by min. and/or max. value."""
+
+    name: str
+    vmin: Optional[float] = None
+    vmax: Optional[float] = None
+    units: str = ""
+    fmt: str = "{:g}"
+
+    def __post_init__(self) -> None:
+        """Finalize instantiation."""
+        if (self.vmin, self.vmax) == (None, None):
+            raise ValueError("vmin and vmax must not both be None")
+
+    def format_human(self) -> str:
+        """Format in human-readable form."""
+        units = self.units
+        if units:
+            units = f" {units}"
+        s = self.name
+        lower = "" if self.vmin is None else f"{self.fmt.format(self.vmin)}{units}"
+        upper = "" if self.vmax is None else f"{self.fmt.format(self.vmax)}{units}"
+        if self.vmin is not None and self.vmax is not None:
+            s += f" in {lower} to {upper}"
+        elif self.vmin is not None:
+            s += f" >= {lower}"
+        elif self.vmax is not None:
+            s += f" <= {upper}"
+        return s
+
+    def format_file(self) -> str:
+        """Format compatible with file names."""
+        units = self.units
+        units = units.replace(" ", "")
+        if "/" in units:
+            # TODO more sophisticated approach (regex-based)
+            units = (
+                units.replace("/s", "s-1")
+                .replace("/h", "h-1")
+                .replace("/K", "-1")
+                .replace("/km", "km-1")
+            )
+            if "/" in units:
+                raise ValueError(f"could not replace all slashes in units: '{units}'")
+        s = self.name.replace(" ", "-")
+        lower = "" if self.vmin is None else f"{self.fmt.format(self.vmin)}{units}"
+        upper = "" if self.vmax is None else f"{self.fmt.format(self.vmax)}{units}"
+        if self.vmin is not None and self.vmax is not None:
+            s += f"-{lower}-to-{upper}"
+        elif self.vmin is not None:
+            s += f"-ge-{lower}"
+        elif self.vmax is not None:
+            s += f"-le-{upper}"
+        assert "/" not in s, f"/ in {s}"  # TODO proper check
+        return s.lower()
