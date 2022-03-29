@@ -49,6 +49,7 @@ class TrajDataset:
         """Create a new instance."""
         self.config: TrajDataset.Config = self.Config(**config_kwargs)
         self.ds: xr.Dataset = ds
+        self.meta = TrajDatasetMetadata(self)
 
     def count(self, criteria: Optional[Criteria] = None) -> int:
         """Count all trajs that fulfill the given criteria.
@@ -173,37 +174,22 @@ class TrajDataset:
         return cls(ds=ds, **config_kwargs)
 
 
-# pylint: disable=R0904  # too-many-public-methods (>20)
-class ExtendedTrajDataset(TrajDataset):
-    """A temporary extension of ``TrajDataset`` with additional methods.
+class TrajDatasetMetadata:
+    """Metadata handler for traj dataset."""
 
-    These methods are untested and might be moved to other classes eventually.
-    Only the interface of ``TrajDataset`` can be considered stable!
-
-    """
-
-    @dc.dataclass
-    class Config(TrajDataset.Config):
-        """Configuration."""
-
-    def __init__(
-        self,
-        ds: xr.Dataset,
-        **config_kwargs: Any,
-    ) -> None:
+    def __init__(self, trajs: TrajDataset) -> None:
         """Create a new instance."""
-        self.config: ExtendedTrajDataset.Config
-        super().__init__(ds, **config_kwargs)
+        self.trajs: TrajDataset = trajs
 
     def get_dt_ref(self) -> dt.datetime:
         """Get reference datetime (start of the simulation)."""
         return dt.datetime(
-            self.ds.attrs["ref_year"],
-            self.ds.attrs["ref_month"],
-            self.ds.attrs["ref_day"],
-            self.ds.attrs["ref_hour"],
-            self.ds.attrs["ref_min"],
-            self.ds.attrs["ref_sec"],
+            self.trajs.ds.attrs["ref_year"],
+            self.trajs.ds.attrs["ref_month"],
+            self.trajs.ds.attrs["ref_day"],
+            self.trajs.ds.attrs["ref_hour"],
+            self.trajs.ds.attrs["ref_min"],
+            self.trajs.ds.attrs["ref_sec"],
         )
 
     def get_abs_time(
@@ -215,42 +201,19 @@ class ExtendedTrajDataset(TrajDataset):
             idcs (optional): Indices or slice to return only a subset of steps.
 
         """
-        rel_time = self.ds.time.data[idcs].astype("timedelta64[s]").astype(dt.timedelta)
+        rel_time = (
+            self.trajs.ds.time.data[idcs].astype("timedelta64[s]").astype(dt.timedelta)
+        )
         abs_time = (self.get_dt_ref() + rel_time).tolist()
         # mypy thinks return type is Any (mypy v0.941, numpy v1.22.3)
         return cast(list[dt.datetime], abs_time)
 
     def format_abs_time(
-        self,
-        idcs: Union[Sequence[int], slice] = slice(None),
+        self, idcs: Union[Sequence[int], slice] = slice(None)
     ) -> list[str]:
         """Format the time dimension as absolute datimes."""
         abs_time = self.get_abs_time(idcs)
         return [dt_.strftime("%Y-%m-%d %H:%M:%S") for dt_ in abs_time]
-
-    def get_duration(self) -> dt.timedelta:
-        """Get the duration of the dataset."""
-        return self.get_end() - self.get_start()
-
-    def format_duration(self) -> str:
-        """Format the duration of the dataset."""
-        return self.format_rel_time(self.get_end())
-
-    def format_rel_time(
-        self,
-        end: dt.datetime,
-        start: Optional[dt.datetime] = None,
-    ) -> str:
-        """Format relative, by default since the start of the dataset."""
-        if start is None:
-            start = self.get_start()
-        dur = end - start
-        tot_secs = dur.total_seconds()
-        hours = int(tot_secs / 3600)
-        mins = int((tot_secs - 3600 * hours) / 60)
-        secs = int(tot_secs - 3600 * hours - 60 * mins)
-        assert secs + 60 * mins + 3600 * hours == tot_secs
-        return f"{hours:02}:{mins:02}:{secs:02}"
 
     def get_start(self) -> dt.datetime:
         """Get the first time step in the file, optionally as a string."""
@@ -270,10 +233,34 @@ class ExtendedTrajDataset(TrajDataset):
         # See comment in method get_start
         return self.format_abs_time(idcs=[1])[0]
 
-    def get_end(self) -> dt.datetime:
+    def _get_duration(self) -> dt.timedelta:
+        """Get the duration of the dataset."""
+        return self._get_end() - self.get_start()
+
+    def _format_duration(self) -> str:
+        """Format the duration of the dataset."""
+        return self._format_rel_time(self._get_end())
+
+    def _format_rel_time(
+        self,
+        end: dt.datetime,
+        start: Optional[dt.datetime] = None,
+    ) -> str:
+        """Format relative, by default since the start of the dataset."""
+        if start is None:
+            start = self.get_start()
+        dur = end - start
+        tot_secs = dur.total_seconds()
+        hours = int(tot_secs / 3600)
+        mins = int((tot_secs - 3600 * hours) / 60)
+        secs = int(tot_secs - 3600 * hours - 60 * mins)
+        assert secs + 60 * mins + 3600 * hours == tot_secs
+        return f"{hours:02}:{mins:02}:{secs:02}"
+
+    def _get_end(self) -> dt.datetime:
         """Get the last time step in the file, optionally as a string."""
         return self.get_abs_time(idcs=[-1])[0]
 
-    def format_end(self) -> str:
+    def _format_end(self) -> str:
         """Format the last time step in the file, optionally as a string."""
         return self.format_abs_time(idcs=[-1])[0]
