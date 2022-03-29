@@ -1,5 +1,14 @@
 # Atmcirclib: Changelog
 
+## v0.2.0 (tbd)
+
+- Implement string formatting of `*Criterion` and `Criteria` instances for titles ("human") and file names ("file"), with tests
+- Extend `TrajDatasetMetadata` with some functionality required in `cosmo_nawdex.bin.plot_traj_density`
+
+### TODOs
+
+- [ ] Make interface of `TrajDatasetMetadata` cleaner and more self-consistent (names, return types)
+
 ## v0.1.0 (2022-03-29)
 
 - Break up monolithic `TrajsDataset` (now `TrajsDataset`) class
@@ -13,10 +22,10 @@
 
 ### TODOs
 
-- Implement reading trajs from text file (offline lagranto output)
-- Simplify criteria interface with string-based shorthand arguments better suited for interactive sessions
-- Write tests for additional functionality like trajs selection/removal
-- Put some thought into `TrajDatasetMetadata` and write some tests
+- [ ] Implement reading trajs from text file (offline lagranto output)
+- [ ] Simplify criteria interface with string-based shorthand arguments better suited for interactive sessions
+- [ ] Write tests for additional functionality like trajs selection/removal
+- [ ] Put some thought into `TrajDatasetMetadata` and write some tests
 
 ## v0.0.1 (2022-03-25)
 
