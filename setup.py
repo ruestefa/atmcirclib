@@ -58,7 +58,7 @@ description_files: list[str] = [
 
 metadata: dict[str, Any] = {
     "name": "atmcirclib",
-    "version": "0.0.1",
+    "version": "0.1.0",
     "description": "Python library of Atmospheric Circulation group",
     "long_description": read_present_files(description_files),
     "author": "Stefan Ruedisuehli",
