@@ -174,6 +174,8 @@ class TrajDataset:
         return cls(ds=ds, **config_kwargs)
 
 
+# TODO Clean this class up: Consistent methods (names, return types), tests etc.
+# NOTE Derived from remnants of temporary ExtendedTrajDataset, therefore messy
 class TrajDatasetMetadata:
     """Metadata handler for traj dataset."""
 
@@ -181,6 +183,7 @@ class TrajDatasetMetadata:
         """Create a new instance."""
         self.trajs: TrajDataset = trajs
 
+    # TODO Consider removing 'dt' from name (inconsistent w/ other methods)
     def get_dt_ref(self) -> dt.datetime:
         """Get reference datetime (start of the simulation)."""
         return dt.datetime(
@@ -192,7 +195,7 @@ class TrajDatasetMetadata:
             self.trajs.ds.attrs["ref_sec"],
         )
 
-    def get_abs_time(
+    def get_abs_times(
         self, idcs: Union[Sequence[int], slice] = slice(None)
     ) -> list[dt.datetime]:
         """Get the time dimension as absolute datimes.
@@ -201,18 +204,57 @@ class TrajDatasetMetadata:
             idcs (optional): Indices or slice to return only a subset of steps.
 
         """
-        rel_time = (
-            self.trajs.ds.time.data[idcs].astype("timedelta64[s]").astype(dt.timedelta)
+        rel_times = (
+            # TODO move this convertion into a utility function
+            self.trajs.ds.time.data[idcs]
+            .astype("timedelta64[s]")
+            .astype(dt.timedelta)
         )
-        abs_time = (self.get_dt_ref() + rel_time).tolist()
+        abs_time = (self.get_dt_ref() + rel_times).tolist()
         # mypy thinks return type is Any (mypy v0.941, numpy v1.22.3)
         return cast(list[dt.datetime], abs_time)
+
+    # TODO Fix inconsistency that this method returns float, others dt.datetime
+    def get_times_rel_start(
+        self,
+        idcs: Union[Sequence[int], slice] = slice(None),
+        start: Optional[dt.datetime] = None,
+        ref: Optional[dt.datetime] = None,
+        unit: str = "s",
+    ) -> list[float]:
+        """Get the time steps as duration since start in the given unit."""
+        if start is None:
+            start = self.get_start()
+        if ref is None:
+            ref = self.get_dt_ref()
+        ref_rel_times = (
+            # TODO move this convertion into a utility function
+            self.trajs.ds.time.data[idcs]
+            .astype("timedelta64[s]")
+            .astype(dt.timedelta)
+        )
+        start_rel_times = ref_rel_times + ref - start
+        # Conversion factor from seconds
+        facts_by_unit = {
+            "s": 1.0,
+            "m": 1.0 / 60,
+            "h": 1.0 / 3600,
+            "sec": 1.0,
+            "min": 1.0 / 60,
+            "hr": 1.0 / 3600,
+        }
+        try:
+            fact = facts_by_unit[unit]
+        except KeyError as e:
+            units_fmtd = ", ".join(map("'{}'".format, facts_by_unit))
+            raise ValueError(f"invalid unit '{unit}'; choices: {units_fmtd}") from e
+        return [dt_.total_seconds() * fact for dt_ in start_rel_times]
 
     def format_abs_time(
         self, idcs: Union[Sequence[int], slice] = slice(None)
     ) -> list[str]:
         """Format the time dimension as absolute datimes."""
-        abs_time = self.get_abs_time(idcs)
+        abs_time = self.get_abs_times(idcs)
         return [dt_.strftime("%Y-%m-%d %H:%M:%S") for dt_ in abs_time]
 
     def get_start(self) -> dt.datetime:
@@ -226,7 +268,7 @@ class TrajDatasetMetadata:
         #   [2016-09-24_23:59:50, 2016-09-25_00:00:00, 2016-09-25_00:01:00, ...]
         # What we want instead is the second step.
         # Eventually, this should be implemented in COSMO more consistently!
-        return self.get_abs_time(idcs=[1])[0]
+        return self.get_abs_times(idcs=[1])[0]
 
     def format_start(self) -> str:
         """Format the first time step in the file, optionally as a string."""
@@ -235,7 +277,7 @@ class TrajDatasetMetadata:
 
     def get_hours_since_start(self, idx_time: int) -> int:
         """Convert a time index into relative hours since the trajs start."""
-        abs_target_time = self.get_abs_time([idx_time])[0]
+        abs_target_time = self.get_abs_times([idx_time])[0]
         abs_start_time = self.get_start()
         rel_target_time = abs_target_time - abs_start_time
         rel_target_hours = int(rel_target_time.total_seconds() / 3600)
@@ -268,7 +310,7 @@ class TrajDatasetMetadata:
 
     def _get_end(self) -> dt.datetime:
         """Get the last time step in the file, optionally as a string."""
-        return self.get_abs_time(idcs=[-1])[0]
+        return self.get_abs_times(idcs=[-1])[0]
 
     def _format_end(self) -> str:
         """Format the last time step in the file, optionally as a string."""
