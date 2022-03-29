@@ -233,6 +233,15 @@ class TrajDatasetMetadata:
         # See comment in method get_start
         return self.format_abs_time(idcs=[1])[0]
 
+    def get_hours_since_start(self, idx_time: int) -> int:
+        """Convert a time index into relative hours since the trajs start."""
+        abs_target_time = self.get_abs_time([idx_time])[0]
+        abs_start_time = self.get_start()
+        rel_target_time = abs_target_time - abs_start_time
+        rel_target_hours = int(rel_target_time.total_seconds() / 3600)
+        assert rel_target_hours * 3600.0 == rel_target_time.total_seconds()
+        return rel_target_hours
+
     def _get_duration(self) -> dt.timedelta:
         """Get the duration of the dataset."""
         return self._get_end() - self.get_start()
