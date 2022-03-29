@@ -21,6 +21,15 @@ if TYPE_CHECKING:
     # Local
     from .traj_dataset import TrajDataset
 
+__all__: list[str] = [
+    "AllCriterion",
+    "BoundaryZoneCriterion",
+    "Criteria",
+    "Criterion",
+    "LeaveDomainCriterion",
+    "VariableCriterion",
+]
+
 
 def sfmt(v: Any, q: str = "'") -> str:
     """If ``v`` is a string, adding quotes, otherwise convert to string."""
