@@ -26,9 +26,11 @@ __all__: list[str] = [
     "AllCriterion",
     "BoundaryZoneCriterion",
     "Criteria",
+    "CriteriaFormatter",
     "Criterion",
     "LeaveDomainCriterion",
     "VariableCriterion",
+    "VariableCriterionFormatter",
 ]
 
 
@@ -52,20 +54,36 @@ class Criterion(abc.ABC):
         """Invert the criterion."""
         ...
 
-    @abc.abstractmethod
-    def _format_file(self) -> str:
-        """Format to string suitable for file names."""
-        ...
+    def dict(self) -> dict[str, Any]:
+        """Return dictionary reprentation with all instantiation arguments."""
+        # pylint: disable=R0201  # no-self-use
+        return {}
+
+    def format(self, mode: str = "human") -> str:
+        """Format criterion to a string."""
+        methods_by_mode = {
+            "human": self._format_human,
+            "file": self._format_file,
+        }
+        try:
+            method = methods_by_mode[mode]
+        except KeyError as e:
+            modes_fmtd = ", ".join(map("'{}'".format, methods_by_mode))
+            raise ValueError(
+                f"invalid format mode '{mode}'; choices: {modes_fmtd}"
+            ) from e
+        else:
+            return method()
 
     @abc.abstractmethod
     def _format_human(self) -> str:
         """Format to string suitable for humans (e.g., title)."""
         ...
 
-    def dict(self) -> dict[str, Any]:
-        """Return dictionary reprentation with all instantiation arguments."""
-        # pylint: disable=R0201  # no-self-use
-        return {}
+    @abc.abstractmethod
+    def _format_file(self) -> str:
+        """Format to string suitable for file names."""
+        ...
 
     def __repr__(self) -> str:
         """Return a string representation with all instantiation arguments."""
@@ -92,12 +110,12 @@ class AllCriterion(Criterion):
         """Invert the criterion."""
         return InvertedAllCriterion()
 
-    def _format_file(self) -> str:
-        """Format to string suitable for file names."""
-        return "all"
-
     def _format_human(self) -> str:
         """Format to string suitable for humans (e.g., title)."""
+        return "all"
+
+    def _format_file(self) -> str:
+        """Format to string suitable for file names."""
         return "all"
 
 
@@ -112,12 +130,12 @@ class InvertedAllCriterion(Criterion):
         """Invert the criterion."""
         return AllCriterion()
 
-    def _format_file(self) -> str:
-        """Format to string suitable for file names."""
-        return "none"
-
     def _format_human(self) -> str:
         """Format to string suitable for humans (e.g., title)."""
+        return "none"
+
+    def _format_file(self) -> str:
+        """Format to string suitable for file names."""
         return "none"
 
 
@@ -176,13 +194,13 @@ class VariableCriterion(_VariableCriterion):
         other.formatter = self.formatter
         return other
 
-    def _format_file(self) -> str:
-        """Format to string suitable for file names."""
-        return self.formatter.format_file(self)
-
     def _format_human(self) -> str:
         """Format to string suitable for humans (e.g., title)."""
         return self.formatter.format_human(self)
+
+    def _format_file(self) -> str:
+        """Format to string suitable for file names."""
+        return self.formatter.format_file(self)
 
 
 class InvertedVariableCriterion(_VariableCriterion):
@@ -198,15 +216,15 @@ class InvertedVariableCriterion(_VariableCriterion):
         other.formatter = self.formatter
         return other
 
-    def _format_file(self) -> str:
-        """Format to string suitable for file names."""
-        # pylint: disable=W0212  # protected-access (Criterion._format_file)
-        return f"not-{self.invert()._format_file()}"
-
     def _format_human(self) -> str:
         """Format to string suitable for humans (e.g., title)."""
         # pylint: disable=W0212  # protected-access (Criterion._format_human)
         return f"not {self.invert()._format_human()}"
+
+    def _format_file(self) -> str:
+        """Format to string suitable for file names."""
+        # pylint: disable=W0212  # protected-access (Criterion._format_file)
+        return f"not-{self.invert()._format_file()}"
 
 
 class LeaveDomainCriterion(Criterion):
@@ -222,13 +240,13 @@ class LeaveDomainCriterion(Criterion):
         """Invert the criterion."""
         return InvertedLeaveDomainCriterion()
 
-    def _format_file(self) -> str:
-        """Format to string suitable for file names."""
-        return "leaving-domain"
-
     def _format_human(self) -> str:
         """Format to string suitable for humans (e.g., title)."""
         return "leaving domain"
+
+    def _format_file(self) -> str:
+        """Format to string suitable for file names."""
+        return "leaving-domain"
 
 
 class InvertedLeaveDomainCriterion(Criterion):
@@ -242,13 +260,13 @@ class InvertedLeaveDomainCriterion(Criterion):
         """Invert the criterion."""
         return LeaveDomainCriterion()
 
-    def _format_file(self) -> str:
-        """Format to string suitable for file names."""
-        return "never-leaving-domain"
-
     def _format_human(self) -> str:
         """Format to string suitable for humans (e.g., title)."""
         return "never leaving domain"
+
+    def _format_file(self) -> str:
+        """Format to string suitable for file names."""
+        return "never-leaving-domain"
 
 
 class _BoundaryZoneCriterion(Criterion):
@@ -289,13 +307,13 @@ class BoundaryZoneCriterion(_BoundaryZoneCriterion):
         """Invert the criterion."""
         return InvertedBoundaryZoneCriterion(**self.dict())
 
-    def _format_file(self) -> str:
-        """Format to string suitable for file names."""
-        return "in-boundary-zone"
-
     def _format_human(self) -> str:
         """Format to string suitable for humans (e.g., title)."""
         return "in boundary zone"
+
+    def _format_file(self) -> str:
+        """Format to string suitable for file names."""
+        return "in-boundary-zone"
 
 
 class InvertedBoundaryZoneCriterion(_BoundaryZoneCriterion):
@@ -309,13 +327,13 @@ class InvertedBoundaryZoneCriterion(_BoundaryZoneCriterion):
         """Invert the criterion."""
         return BoundaryZoneCriterion(**self.dict())
 
-    def _format_file(self) -> str:
-        """Format to string suitable for file names."""
-        return "never-in-boundary-zone"
-
     def _format_human(self) -> str:
         """Format to string suitable for humans (e.g., title)."""
         return "never in boundary zone"
+
+    def _format_file(self) -> str:
+        """Format to string suitable for file names."""
+        return "never-in-boundary-zone"
 
 
 # pylint: disable=R0901  # too-many-ancestors (>7)
@@ -396,6 +414,10 @@ class VariableCriterionFormatter:
             **dc.asdict(self),
         ).format_file()
 
+    def derive(self, **kwargs: Any) -> VariableCriterionFormatter:
+        """Create a derived instance with adapted attributes."""
+        return type(self)(**{**dc.asdict(self), **kwargs})
+
 
 @dc.dataclass
 class VariableRangeFormatter:
@@ -475,3 +497,42 @@ class VariableRangeFormatter:
         if self.time_units:
             s += f" {self.time_units}"
         return s
+
+
+@dc.dataclass
+class CriteriaFormatter:
+    """Format multiple criteria to a single string."""
+
+    times: Optional[Sequence[float]] = None
+    vars_attrs: dict[str, Any] = dc.field(default_factory=dict)
+
+    def format_human(self, criteria: Criteria) -> str:
+        """Format to a human-readable string."""
+        joiner = " and " if criteria.require_all else " or "
+        return self._format("human", criteria, joiner)
+
+    def format_file(self, criteria: Criteria) -> str:
+        """Format to a string compatible with file names."""
+        joiner = "_and_" if criteria.require_all else "_or_"
+        return self._format("file", criteria, joiner)
+
+    def _format(self, mode: str, criteria: Criteria, joiner: str) -> str:
+        """Core method to format in a given mode."""
+        parts: list[str] = []
+        for criterion in criteria:
+            if not isinstance(
+                criterion, (VariableCriterion, InvertedVariableCriterion)
+            ):
+                parts.append(criterion.format(mode))
+            else:
+                old_formatter = criterion.formatter
+                # pylint: disable=E1101  # no-member ('Field'.get)
+                var_attrs = dict(self.vars_attrs.get(criterion.variable, {}))
+                # pylint: disable=E1136  # unsubscriptable-object (self.times)
+                if self.times is not None:
+                    if "time" not in var_attrs:
+                        var_attrs["time"] = self.times[criterion.time_idx]
+                criterion.formatter = criterion.formatter.derive(**var_attrs)
+                parts.append(criterion.format(mode))
+                criterion.formatter = old_formatter
+        return joiner.join(parts)
