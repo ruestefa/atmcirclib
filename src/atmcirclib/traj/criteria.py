@@ -343,7 +343,7 @@ class VariableCriterionFormatter:
     units: str = ""
     time: Optional[float] = None
     time_units: str = ""
-    time_relative: bool = False
+    time_relative: bool = True
     fmt: str = "{:g}"
 
     def format_human(self, crit: VariableCriterion) -> str:
@@ -379,7 +379,7 @@ class VariableRangeFormatter:
     units: str = ""
     time: Optional[float] = None
     time_units: str = ""
-    time_relative: bool = False
+    time_relative: bool = True
     fmt: str = "{:g}"
 
     def __post_init__(self) -> None:
