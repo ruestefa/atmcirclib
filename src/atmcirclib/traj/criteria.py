@@ -140,6 +140,7 @@ class _VariableCriterion(Criterion):
         self.time_idx: int = time_idx
         self.vmin: Optional[float] = vmin
         self.vmax: Optional[float] = vmax
+        self.formatter = VariableCriterionFormatter()
 
     def dict(self) -> dict[str, Any]:
         """Return dictionary reprentation with all instantiation arguments."""
@@ -171,23 +172,17 @@ class VariableCriterion(_VariableCriterion):
 
     def invert(self) -> InvertedVariableCriterion:
         """Invert the criterion."""
-        return InvertedVariableCriterion(**self.dict())
+        other = InvertedVariableCriterion(**self.dict())
+        other.formatter = self.formatter
+        return other
 
     def _format_file(self) -> str:
         """Format to string suitable for file names."""
-        return VariableRangeFormatter(
-            name=self.variable,
-            vmin=self.vmin,
-            vmax=self.vmax,
-        ).format_file()
+        return self.formatter.format_file(self)
 
     def _format_human(self) -> str:
         """Format to string suitable for humans (e.g., title)."""
-        return VariableRangeFormatter(
-            name=self.variable,
-            vmin=self.vmin,
-            vmax=self.vmax,
-        ).format_human()
+        return self.formatter.format_human(self)
 
 
 class InvertedVariableCriterion(_VariableCriterion):
@@ -199,7 +194,9 @@ class InvertedVariableCriterion(_VariableCriterion):
 
     def invert(self) -> VariableCriterion:
         """Invert the criterion."""
-        return VariableCriterion(**self.dict())
+        other = VariableCriterion(**self.dict())
+        other.formatter = self.formatter
+        return other
 
     def _format_file(self) -> str:
         """Format to string suitable for file names."""
@@ -372,6 +369,35 @@ class Criteria(UserList[Criterion]):
 
 
 @dc.dataclass
+class VariableCriterionFormatter:
+    """Formatter for variable criterion."""
+
+    units: str = ""
+    time: Optional[float] = None
+    time_units: str = ""
+    time_relative: bool = False
+    fmt: str = "{:g}"
+
+    def format_human(self, crit: VariableCriterion) -> str:
+        """Format criterion for human consumption."""
+        return VariableRangeFormatter(
+            name=crit.variable,
+            vmin=crit.vmin,
+            vmax=crit.vmax,
+            **dc.asdict(self),
+        ).format_human()
+
+    def format_file(self, crit: VariableCriterion) -> str:
+        """Format criterion compatible with file names."""
+        return VariableRangeFormatter(
+            name=crit.variable,
+            vmin=crit.vmin,
+            vmax=crit.vmax,
+            **dc.asdict(self),
+        ).format_file()
+
+
+@dc.dataclass
 class VariableRangeFormatter:
     """Format a variable with a range given by min. and/or max. value."""
 
@@ -379,6 +405,9 @@ class VariableRangeFormatter:
     vmin: Optional[float] = None
     vmax: Optional[float] = None
     units: str = ""
+    time: Optional[float] = None
+    time_units: str = ""
+    time_relative: bool = False
     fmt: str = "{:g}"
 
     def __post_init__(self) -> None:
@@ -391,7 +420,7 @@ class VariableRangeFormatter:
         units = self.units
         if units:
             units = f" {units}"
-        s = self.name
+        s = self.name + self._format_time()
         lower = "" if self.vmin is None else f"{self.fmt.format(self.vmin)}{units}"
         upper = "" if self.vmax is None else f"{self.fmt.format(self.vmax)}{units}"
         if self.vmin is not None and self.vmax is not None:
@@ -404,7 +433,24 @@ class VariableRangeFormatter:
 
     def format_file(self) -> str:
         """Format compatible with file names."""
-        units = self.units
+        units = self._prepare_units_file(self.units)
+        s = self.name.replace(" ", "-") + self._prepare_units_file(
+            self._format_time().replace(" ", "")
+        )
+        lower = "" if self.vmin is None else f"{self.fmt.format(self.vmin)}{units}"
+        upper = "" if self.vmax is None else f"{self.fmt.format(self.vmax)}{units}"
+        if self.vmin is not None and self.vmax is not None:
+            s += f"-{lower}-to-{upper}"
+        elif self.vmin is not None:
+            s += f"-ge-{lower}"
+        elif self.vmax is not None:
+            s += f"-le-{upper}"
+        assert "/" not in s, f"/ in {s}"  # TODO proper check
+        return s.lower()
+
+    @staticmethod
+    def _prepare_units_file(units: str) -> str:
+        """Prepare units for file-compatible format."""
         units = units.replace(" ", "")
         if "/" in units:
             # TODO more sophisticated approach (regex-based)
@@ -416,14 +462,16 @@ class VariableRangeFormatter:
             )
             if "/" in units:
                 raise ValueError(f"could not replace all slashes in units: '{units}'")
-        s = self.name.replace(" ", "-")
-        lower = "" if self.vmin is None else f"{self.fmt.format(self.vmin)}{units}"
-        upper = "" if self.vmax is None else f"{self.fmt.format(self.vmax)}{units}"
-        if self.vmin is not None and self.vmax is not None:
-            s += f"-{lower}-to-{upper}"
-        elif self.vmin is not None:
-            s += f"-ge-{lower}"
-        elif self.vmax is not None:
-            s += f"-le-{upper}"
-        assert "/" not in s, f"/ in {s}"  # TODO proper check
-        return s.lower()
+        return units
+
+    def _format_time(self) -> str:
+        """Format time specification following the variable name."""
+        if self.time is None:
+            return ""
+        s = " @ "
+        if self.time_relative:
+            s += "+"
+        s += self.fmt.format(self.time)
+        if self.time_units:
+            s += f" {self.time_units}"
+        return s
