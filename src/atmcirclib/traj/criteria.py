@@ -336,56 +336,6 @@ class InvertedBoundaryZoneCriterion(_BoundaryZoneCriterion):
         return "never-in-boundary-zone"
 
 
-# pylint: disable=R0901  # too-many-ancestors (>7)
-class Criteria(UserList[Criterion]):
-    """A set of combined criteria to select trajectories."""
-
-    def __init__(
-        self,
-        criteria: Optional[Sequence[Criterion]] = None,
-        *,
-        require_all: bool = True,
-    ) -> None:
-        """Create a new instance.
-
-        Args:
-            criteria (optional): Individual criteria.
-
-            require_all (optional): Whether selected trajectories must fulfill
-                all criteria at once or only one.
-
-        """
-        super().__init__(criteria)
-        self.require_all: bool = require_all
-
-    def invert(self) -> Criteria:
-        """Invert the criteria."""
-        return type(self)(
-            criteria=[criterion.invert() for criterion in self],
-            require_all=not self.require_all,
-        )
-
-    def derive(
-        self,
-        criteria: Optional[Sequence[Criterion]] = None,
-        *,
-        require_all: Optional[bool] = None,
-    ) -> Criteria:
-        """Derive an instance with optionally adapted parameters."""
-        if criteria is None:
-            criteria = list(self)
-        if require_all is None:
-            require_all = self.require_all
-        return type(self)(criteria, require_all=require_all)
-
-    def dict(self) -> dict[str, Any]:
-        """Return dictionary reprentation with all instantiation arguments."""
-        return {
-            "criteria": list(self),
-            "require_all": self.require_all,
-        }
-
-
 @dc.dataclass
 class VariableCriterionFormatter:
     """Formatter for variable criterion."""
@@ -499,6 +449,61 @@ class VariableRangeFormatter:
         return s
 
 
+# pylint: disable=R0901  # too-many-ancestors (>7)
+class Criteria(UserList[Criterion]):
+    """A set of combined criteria to select trajectories."""
+
+    def __init__(
+        self,
+        criteria: Optional[Sequence[Criterion]] = None,
+        *,
+        require_all: bool = True,
+    ) -> None:
+        """Create a new instance.
+
+        Args:
+            criteria (optional): Individual criteria.
+
+            require_all (optional): Whether selected trajectories must fulfill
+                all criteria at once or only one.
+
+        """
+        super().__init__(criteria)
+        self.require_all: bool = require_all
+        self.formatter: CriteriaFormatter = CriteriaFormatter()
+
+    def format(self, mode: str = "human") -> str:
+        """Combine all criteria into a single string."""
+        return self.formatter.format(self, mode)
+
+    def invert(self) -> Criteria:
+        """Invert the criteria."""
+        return type(self)(
+            criteria=[criterion.invert() for criterion in self],
+            require_all=not self.require_all,
+        )
+
+    def derive(
+        self,
+        criteria: Optional[Sequence[Criterion]] = None,
+        *,
+        require_all: Optional[bool] = None,
+    ) -> Criteria:
+        """Derive an instance with optionally adapted parameters."""
+        if criteria is None:
+            criteria = list(self)
+        if require_all is None:
+            require_all = self.require_all
+        return type(self)(criteria, require_all=require_all)
+
+    def dict(self) -> dict[str, Any]:
+        """Return dictionary reprentation with all instantiation arguments."""
+        return {
+            "criteria": list(self),
+            "require_all": self.require_all,
+        }
+
+
 @dc.dataclass
 class CriteriaFormatter:
     """Format multiple criteria to a single string."""
@@ -506,17 +511,24 @@ class CriteriaFormatter:
     times: Optional[Sequence[float]] = None
     vars_attrs: dict[str, Any] = dc.field(default_factory=dict)
 
-    def format_human(self, criteria: Criteria) -> str:
-        """Format to a human-readable string."""
-        joiner = " and " if criteria.require_all else " or "
-        return self._format("human", criteria, joiner)
+    def derive(self, **kwargs: Any) -> CriteriaFormatter:
+        """Derive a new instance with adapted attributes."""
+        return type(self)(**{**dc.asdict(self), **kwargs})
 
-    def format_file(self, criteria: Criteria) -> str:
-        """Format to a string compatible with file names."""
-        joiner = "_and_" if criteria.require_all else "_or_"
-        return self._format("file", criteria, joiner)
+    def format(self, criteria: Criteria, mode: str) -> str:
+        """Format criteria in the given mode."""
+        joiners_by_mode = {
+            "human": " and " if criteria.require_all else " or ",
+            "file": "_and_" if criteria.require_all else "_or_",
+        }
+        try:
+            joiner = joiners_by_mode[mode]
+        except KeyError as e:
+            modes_fmtd = ", ".join(map("'{}'".format, joiners_by_mode))
+            raise ValueError(f"invalid mode '{mode}'; choices: {modes_fmtd}") from e
+        return self._format(criteria, mode, joiner)
 
-    def _format(self, mode: str, criteria: Criteria, joiner: str) -> str:
+    def _format(self, criteria: Criteria, mode: str, joiner: str) -> str:
         """Core method to format in a given mode."""
         parts: list[str] = []
         for criterion in criteria:

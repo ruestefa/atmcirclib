@@ -196,7 +196,7 @@ class Test_CriteriaFormatter:
             "UV >= 30",
         ]
         human = " and ".join(human_parts)
-        assert formatter.format_human(crits) == human
+        assert formatter.format(crits, "human") == human
         file_parts = [
             "never-leaving-domain",
             "never-in-boundary-zone",
@@ -204,7 +204,7 @@ class Test_CriteriaFormatter:
             "uv-ge-30",
         ]
         file = "_and_".join(file_parts)
-        assert formatter.format_file(crits) == file
+        assert formatter.format(crits, "file") == file
 
     def test_or(self) -> None:
         """Don't require all criteria to be met."""
@@ -225,19 +225,18 @@ class Test_CriteriaFormatter:
             ],
             require_all=False,
         )
-        formatter = CriteriaFormatter()
         human_parts = [
             "Z in 6000 to 9000",
             "UV >= 30",
         ]
         human = " or ".join(human_parts)
-        assert formatter.format_human(crits) == human
+        assert crits.formatter.format(crits, "human") == human
         file_parts = [
             "z-6000-to-9000",
             "uv-ge-30",
         ]
         file = "_or_".join(file_parts)
-        assert formatter.format_file(crits) == file
+        assert crits.formatter.format(crits, "file") == file
 
     def test_times_units(self) -> None:
         """Add times and units to variables."""
@@ -259,7 +258,7 @@ class Test_CriteriaFormatter:
             ],
             require_all=True,
         )
-        formatter = CriteriaFormatter(
+        crits.formatter = crits.formatter.derive(
             times=[0, 2, 4, 6],
             vars_attrs={
                 "Z": {
@@ -280,11 +279,11 @@ class Test_CriteriaFormatter:
             "UV @ +6 h >= 30 m/s",
         ]
         human = " and ".join(human_parts)
-        assert formatter.format_human(crits) == human
+        assert crits.format("human") == human
         file_parts = [
             "never-leaving-domain",
             "z@+0h-6000m-to-9000m",
             "uv@+6h-ge-30ms-1",
         ]
         file = "_and_".join(file_parts)
-        assert formatter.format_file(crits) == file
+        assert crits.format("file") == file
