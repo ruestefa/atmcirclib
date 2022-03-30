@@ -22,6 +22,7 @@ from atmcirclib.typing import PathLike_T
 # Local
 from .criteria import Criteria
 from .criteria import Criterion
+from .lagranto import convert_traj_ds_lagranto_to_cosmo
 from .start_dataset import TrajStartDataset
 
 
@@ -164,13 +165,28 @@ class TrajDataset:
         return type(self)(ds=new_ds, **dc.asdict(self.config))
 
     @classmethod
-    def from_file(cls, path: PathLike_T, **config_kwargs: Any) -> TrajDataset:
+    def from_file(
+        cls,
+        path: PathLike_T,
+        format: str = "cosmo",
+        *,
+        rot_pole_lon: float = 180.0,
+        rot_pole_lat: float = 90.0,
+        **config_kwargs: Any,
+    ) -> TrajDataset:
         """Read trajs dataset from file."""
         try:
-            # ds = xr.open_dataset(path, engine="netcdf4")
             ds = xr.open_dataset(path)
         except Exception as e:
             raise ValueError(f"error opening trajectories files '{path}'") from e
+        if format == "cosmo":
+            pass
+        elif format == "lagranto":
+            ds = convert_traj_ds_lagranto_to_cosmo(
+                ds, rot_pole_lon=rot_pole_lon, rot_pole_lat=rot_pole_lat
+            )
+        else:
+            raise ValueError(f"invalid format '{format}'; choices: 'cosmo', 'lagranto'")
         return cls(ds=ds, **config_kwargs)
 
 
