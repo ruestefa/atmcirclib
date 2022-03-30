@@ -16,7 +16,7 @@ from atmcirclib.traj import TrajDataset
 from atmcirclib.typing import NDIndex_T
 
 # Local
-from .shared import TrajsDatasetDsFactory
+from .shared import TrajDatasetDsFactory
 
 # pylint: disable=R0201  # no-self-use
 
@@ -30,6 +30,7 @@ REF_DATA_D: dict[str, npt.NDArray[np.generic]]
 # Test data is based on the file traj_t001914_p001.nc from the simulation
 # cosmo_0.04_701x661x80/20s_explicit/2016092000/traj-pvtend.45ms-1_-4h_21_12_reduced
 
+DIMS: tuple[str, str] = ("time", "id")
 VNAN: float = -999.0
 ATTRS: dict[str, Any] = {
     "ref_year": 2016,
@@ -224,8 +225,9 @@ RAW_DATA_D[_name] = [  # multiplied by 1e12 except -999
 ]
 
 
-trajs_ds_factory = TrajsDatasetDsFactory(
+traj_ds_factory = TrajDatasetDsFactory(
     attrs=ATTRS,
+    dims=DIMS,
     raw_coords_d=RAW_COORDS_D,
     raw_data_d=RAW_DATA_D,
     attrs_d=ATTRS_D,
@@ -233,17 +235,18 @@ trajs_ds_factory = TrajsDatasetDsFactory(
     scale_fact_d=SCALE_FACT_D,
     vnan=VNAN,
 )
+create_traj_ds = traj_ds_factory.run
 
-REF_DATA_D = trajs_ds_factory.ref_data_d
-REF_COORDS_D = trajs_ds_factory.ref_coords_d
+REF_DATA_D = traj_ds_factory.ref_data_d
+REF_COORDS_D = traj_ds_factory.ref_coords_d
 
 
 class Test_TestData:
-    """Test test data."""
+    """Test the test dataset."""
 
     def test_create_trajs_xr_dataset(self) -> None:
         """Test creation of a mock trajs dataset."""
-        ds = trajs_ds_factory.run()
+        ds = create_traj_ds()
         assert ds.attrs == ATTRS
         # Check time coordinate
         assert set(dict(ds.coords)) == {"time"}
@@ -258,7 +261,7 @@ class Test_TestData:
     def test_ref_data(self) -> None:
         """Make sure dataset contains copies of ref array."""
         name = "z"
-        ds = trajs_ds_factory.run()
+        ds = create_traj_ds()
         assert np.allclose(ds.variables[name].data, REF_DATA_D[name].data)
         mask = ds.variables[name].data > 3000
         assert mask.sum() > 0
@@ -277,13 +280,13 @@ class Test_Init:
 
     def test_ds(self) -> None:
         """Initalize with xarray dataset."""
-        ds = trajs_ds_factory.run()
+        ds = create_traj_ds()
         trajs = TrajDataset(ds)
         assert trajs.ds == ds
 
     def test_config(self) -> None:
         """Initialize with changed config parameter."""
-        ds = trajs_ds_factory.run()
+        ds = create_traj_ds()
         trajs_ref = TrajDataset(ds)
         trajs_exp = TrajDataset(ds, nan=666)
         assert trajs_ref.config.nan == -999
@@ -295,7 +298,7 @@ class Test_GetData:
 
     def test_default(self) -> None:
         """Call with default options, whereby -999 are replaced by nans."""
-        trajs = TrajDataset(trajs_ds_factory.run())
+        trajs = TrajDataset(create_traj_ds())
         for name, ref in REF_DATA_D.items():
             # Raw field contains -999
             exp = trajs.ds.variables[name].data
@@ -308,7 +311,7 @@ class Test_GetData:
 
     def test_default_explicit(self) -> None:
         """Call with explicit default values."""
-        trajs = TrajDataset(trajs_ds_factory.run())
+        trajs = TrajDataset(create_traj_ds())
         for name, ref in REF_DATA_D.items():
             ref = trajs.get_data(name)
             exp = trajs.get_data(
@@ -321,7 +324,7 @@ class Test_GetData:
 
     def test_replace_vnan(self) -> None:
         """Don't replace -999 by nans."""
-        trajs = TrajDataset(trajs_ds_factory.run())
+        trajs = TrajDataset(create_traj_ds())
         for name, ref in REF_DATA_D.items():
             exp = trajs.get_data(name, replace_vnan=False)
             assert np.allclose(exp, ref, equal_nan=True)
@@ -347,7 +350,7 @@ class Test_GetData:
     )
     def test_indexing(self, c: IndexingTestParams) -> None:
         """Get subarrays by indexing."""
-        trajs = TrajDataset(trajs_ds_factory.run())
+        trajs = TrajDataset(create_traj_ds())
         idcs: dict[str, NDIndex_T] = {}
         if c.idx_time is None:
             c.idx_time = slice(None)

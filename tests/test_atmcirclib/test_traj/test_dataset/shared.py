@@ -17,16 +17,17 @@ import xarray as xr
 from ...test_cosmo.test_cosmo_grid_dataset import create_cosmo_grid_dataset_ds
 
 __all__: list[str] = [
-    "TrajsDatasetDsFactory",
+    "TrajDatasetDsFactory",
     "create_cosmo_grid_dataset_ds",
 ]
 
 
 @dc.dataclass()
-class TrajsDatasetDsFactory:
+class TrajDatasetDsFactory:
     """Create trajs xr datasets for testing."""
 
     attrs: dict[str, Any]
+    dims: tuple[str, str]
     raw_coords_d: dict[str, list[float]]
     raw_data_d: dict[str, list[list[float]]]
     attrs_d: dict[str, dict[str, str]]
@@ -45,7 +46,9 @@ class TrajsDatasetDsFactory:
 
     def run(
         self,
+        *,
         attrs: Optional[dict[str, Any]] = None,
+        dims: Optional[tuple[str, str]] = None,
         raw_coords_d: Optional[dict[str, npt.NDArray[np.generic]]] = None,
         raw_data_d: Optional[dict[str, npt.NDArray[np.generic]]] = None,
         attrs_d: Optional[dict[str, dict[str, str]]] = None,
@@ -53,6 +56,8 @@ class TrajsDatasetDsFactory:
         """Return a new dataset, optionally with changed arguments."""
         if attrs is None:
             attrs = self.attrs
+        if dims is None:
+            dims = self.dims
         if raw_coords_d is None:
             coords_d = self.ref_coords_d
         else:
@@ -65,6 +70,7 @@ class TrajsDatasetDsFactory:
             attrs_d = self.attrs_d
         return self._create_trajs_xr_dataset(
             attrs=attrs,
+            dims=dims,
             coords_d=coords_d,
             data_d=data_d,
             attrs_d=attrs_d,
@@ -100,21 +106,20 @@ class TrajsDatasetDsFactory:
     def _create_trajs_xr_dataset(
         *,
         attrs: dict[str, Any],
+        dims: tuple[str, str],
         coords_d: dict[str, npt.NDArray[np.generic]],
         data_d: dict[str, npt.NDArray[np.generic]],
         attrs_d: dict[str, dict[str, str]],
     ) -> xr.Dataset:
         """Create a mock trajs xarray dataset as read from a NetCDF file."""
 
-        if n := len(coords_d) != 1:
-            raise NotImplementedError(
-                f"{n} coords: " + ", ".join(map("'{}'".format, coords_d))
-            )
-        coord_name = next(iter(coords_d))
-        dims = (coord_name, "id")
-
         def create_coord(name: str) -> xr.DataArray:
             """Create coordinate variable."""
+            if name not in dims:
+                dims_fmtd = ", ".join(map("'{}'".format, dims))
+                raise ValueError(
+                    f"invalid coord name '{name}': not in dims ({dims_fmtd})"
+                )
             assert coords_d is not None  # mypy
             assert attrs_d is not None  # mypy
             return xr.DataArray(

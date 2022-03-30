@@ -22,7 +22,7 @@ from atmcirclib.traj.criteria import VariableCriterion
 
 # Local
 from .shared import create_cosmo_grid_dataset_ds
-from .shared import TrajsDatasetDsFactory
+from .shared import TrajDatasetDsFactory
 
 # pylint: disable=R0201  # no-self-use
 
@@ -48,6 +48,7 @@ RLAT: npt.NDArray[np.float_] = cast(
     np.arange(RLAT_LIM[0], RLAT_LIM[1] + 0.1, 1.0),
 )
 
+DIMS: tuple[str, str] = ("time", "id")
 VNAN: float = -999.0
 ATTRS: dict[str, Any] = {
     "ref_year": 2016,
@@ -198,8 +199,9 @@ RAW_DATA_D[_name] = [
     [+0.000, +0.000, -999.0, -999.0, +0.000, +0.050],
 ]
 
-trajs_ds_factory = TrajsDatasetDsFactory(
+traj_ds_factory = TrajDatasetDsFactory(
     attrs=ATTRS,
+    dims=DIMS,
     raw_coords_d=RAW_COORDS_D,
     raw_data_d=RAW_DATA_D,
     attrs_d=ATTRS_D,
@@ -207,9 +209,10 @@ trajs_ds_factory = TrajsDatasetDsFactory(
     scale_fact_d=SCALE_FACT_D,
     vnan=VNAN,
 )
+create_traj_ds = traj_ds_factory.run
 
-REF_DATA_D = trajs_ds_factory.ref_data_d
-REF_COORDS_D = trajs_ds_factory.ref_coords_d
+REF_DATA_D = traj_ds_factory.ref_data_d
+REF_COORDS_D = traj_ds_factory.ref_coords_d
 
 GRID_DS = COSMOGridDataset(
     create_cosmo_grid_dataset_ds(
@@ -227,7 +230,7 @@ class Test_GetData:
 
     def test_uv(self) -> None:
         """Get horizontal wind speed."""
-        trajs = TrajDataset(trajs_ds_factory.run())
+        trajs = TrajDataset(create_traj_ds())
         uv = trajs.get_data("UV")
         u_ref = np.where(REF_DATA_D["U"] == VNAN, np.nan, REF_DATA_D["U"])
         v_ref = np.where(REF_DATA_D["V"] == VNAN, np.nan, REF_DATA_D["V"])
@@ -240,7 +243,7 @@ class Test_Count:
 
     def test_incomplete(self) -> None:
         """Count trajs that leave the domain."""
-        trajs = TrajDataset(trajs_ds_factory.run())
+        trajs = TrajDataset(create_traj_ds())
         n_incomplete = trajs.count(Criteria([LeaveDomainCriterion()]))
         n_complete = trajs.count(Criteria([LeaveDomainCriterion().invert()]))
         assert n_incomplete == 2
@@ -250,7 +253,7 @@ class Test_Count:
     # (pull domain info, incl. boundary zone coords, out of TrajDataset)
     def test_boundary(self) -> None:
         """Count trajs that reach the boundary zone."""
-        trajs = TrajDataset(trajs_ds_factory.run())
+        trajs = TrajDataset(create_traj_ds())
         n_boundary = trajs.count(
             Criteria([BoundaryZoneCriterion(grid=GRID_DS, size_deg=1)])
         )
@@ -382,7 +385,7 @@ class Test_Count:
     )
     def test_complete(self, cf: _TestCountConfig) -> None:
         """Count only complete trajs trajs that meet the given criteria."""
-        trajs = TrajDataset(trajs_ds_factory.run()).select(
+        trajs = TrajDataset(create_traj_ds()).select(
             Criteria([LeaveDomainCriterion().invert()])
         )
         n = trajs.count(criteria=cf.criteria)
@@ -407,7 +410,7 @@ class Test_Count:
             ],
         )
         in_domain_criteria = Criteria([LeaveDomainCriterion().invert()])
-        trajs = TrajDataset(trajs_ds_factory.run()).select(in_domain_criteria)
+        trajs = TrajDataset(create_traj_ds()).select(in_domain_criteria)
         assert trajs.count(criteria) == 2
         assert trajs.discount(criteria) == 2
         assert trajs.count(criteria.derive(require_all=False)) == 3
