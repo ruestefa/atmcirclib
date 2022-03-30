@@ -198,47 +198,6 @@ RAW_DATA_D[_name] = [
     [+0.000, +0.000, -999.0, -999.0, +0.000, +0.050],
 ]
 
-# _name = "P"
-# ATTRS_D[_name] = {
-#     "standard_name": "air_pressure",
-#     "long_name": "pressure",
-#     "units": "Pa",
-# }
-# # SCALE_FACT_D[_name] = 1e-2
-# RAW_DATA_D[_name] = [
-# ]
-
-# _name = "T"
-# ATTRS_D[_name] = {
-#     "standard_name": "air_temperature",
-#     "long_name": "temperature",
-#     "units": "K",
-# }
-# # SCALE_FACT_D[_name] = 1e-12
-# RAW_DATA_D[_name] = [
-# ]
-
-# _name = "QV"
-# ATTRS_D[_name] = {
-#     "standard_name": "specific_humidity",
-#     "long_name": "specific humidity",
-#     "units": "kg kg-1",
-# }
-# # SCALE_FACT_D[_name] = 1e-12
-# RAW_DATA_D[_name] = [
-# ]
-
-# _name = "POT_VORTIC"
-# ATTRS_D[_name] = {
-#     "standard_name": "ertel_potential_vorticity",
-#     "long_name": "potential vorticity",
-#     "units": "K m2 kg-1 s-1",
-# }
-# # SCALE_FACT_D[_name] = 1e-12
-# RAW_DATA_D[_name] = [
-# ]
-
-
 trajs_ds_factory = TrajsDatasetDsFactory(
     attrs=ATTRS,
     raw_coords_d=RAW_COORDS_D,
