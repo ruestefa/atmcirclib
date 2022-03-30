@@ -3,6 +3,7 @@ from __future__ import annotations
 
 # Standard library
 from typing import Any
+from typing import Union
 
 # Third-party
 import cartopy.crs as ccrs
@@ -351,13 +352,12 @@ COSMO_SCALE_FACT_D[_name] = LAGRANTO_SCALE_FACT_D[_name]
 COSMO_RAW_DATA_D[_name] = LAGRANTO_RAW_DATA_D[_name]
 
 _name = "W"
-COSMO_SCALE_FACT_D[_name] = LAGRANTO_SCALE_FACT_D[_name]
 COSMO_ATTRS_D[_name] = {
     "standard_name": "upward_air_velocity",
     "long_name": "vertical wind velocity",
     "units": "m s-1",
 }
-COSMO_SCALE_FACT_D[_name] = 1 / 3.6  # km/h -> m/s
+COSMO_SCALE_FACT_D[_name] = LAGRANTO_SCALE_FACT_D[_name]
 COSMO_RAW_DATA_D[_name] = LAGRANTO_RAW_DATA_D[_name]
 
 _name = "POT_VORTIC"
@@ -412,11 +412,18 @@ class Test_ConvertLagrantoToCosmo:
         """Create a COSMO dataset."""
         return create_cosmo_ds()
 
-    def compare_vars(self, v1: xr.DataArray, v2: xr.DataArray, name: str = "") -> None:
+    def compare_vars(
+        self,
+        v1: Union[xr.DataArray, xr.Variable],
+        v2: Union[xr.DataArray, xr.Variable],
+        name: str = "",
+    ) -> None:
         """Compare two variables."""
-        assert v1.name == v2.name
-        if name:
-            assert v1.name == name
+        assert isinstance(v1, type(v2)) and isinstance(v2, type(v1))
+        if isinstance(v1, xr.DataArray) and isinstance(v2, xr.DataArray):
+            assert v1.name == v2.name
+            if name:
+                assert v1.name == name
         assert v1.dims == v2.dims
         assert v1.dtype == v2.dtype
         try:
@@ -430,7 +437,7 @@ class Test_ConvertLagrantoToCosmo:
         self.compare_vars(self.ds_lagra.time, self.ds_cosmo.time, "time")
 
     def test_coords(self) -> None:
-        """Compare coordinate variables."""
+        """Compare all coordinate variables."""
         coords_lagra = self.ds_lagra.coords
         coords_cosmo = self.ds_lagra.coords
         assert coords_lagra.keys() == coords_cosmo.keys()
@@ -450,6 +457,14 @@ class Test_ConvertLagrantoToCosmo:
         lat = np.where(mask, LAGRANTO_VNAN, np.array(LAGRANTO_RAW_DATA_D["lat"]))
         assert np.allclose(ds_lagra.longitude.data, lon)
         assert np.allclose(ds_lagra.latitude.data, lat)
+
+    def test_data_vars(self) -> None:
+        """Compare all data variables."""
+        vars_lagra = self.ds_lagra.variables
+        vars_cosmo = self.ds_cosmo.variables
+        assert vars_lagra.keys() == vars_cosmo.keys()
+        for name, var_lagra in vars_lagra.items():
+            self.compare_vars(var_lagra, vars_cosmo[name])
 
     def test_attrs(self) -> None:
         """Compare global dataset attributes."""

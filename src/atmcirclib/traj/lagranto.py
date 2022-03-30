@@ -149,6 +149,20 @@ class TrajDsLagrantoToCosmoConverter:
             attrs=dict(self.var_attrs_d.get(lat_name, {})),
         )
 
+        for name, var in self._ds.variables.items():
+            assert isinstance(name, str)  # mypy
+            if name in ["time", "lon", "lat"]:
+                continue
+            arr = var.data.copy()
+            if name in self.var_scale_fact_d:
+                arr[arr != self.vnan] *= self.var_scale_fact_d[name]
+            data_vars[name] = xr.DataArray(
+                name=name,
+                data=arr.astype(np.float32),
+                dims=dims,
+                attrs=dict(self.var_attrs_d.get(name, {})),
+            )
+
         return data_vars
 
     def _prepare_lon_lat(self) -> tuple[npt.NDArray[np.float_], npt.NDArray[np.float_]]:
