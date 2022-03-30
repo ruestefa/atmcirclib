@@ -77,10 +77,10 @@ class TrajDatasetDsFactory:
             dims_fmtd = ", ".join(map("'{}'".format, self.dims))
             raise ValueError(f"invalid coord name '{name}': not in dims ({dims_fmtd})")
         return xr.DataArray(
+            name=name,
             data=self.coords_d[name].copy(),
             coords={name: self.coords_d[name].copy()},
             dims=(name,),
-            name=name,
             # pylint: disable=E1101  # no-member ('Field'.get)
             attrs=dict(self.attrs_d.get(name, {})),
         )
@@ -88,9 +88,9 @@ class TrajDatasetDsFactory:
     def _create_variable(self, name: str) -> xr.DataArray:
         """Create variable data array."""
         return xr.DataArray(
+            name=name,
             data=self.data_d[name].copy(),
             dims=self.dims,
-            name=name,
             # pylint: disable=E1101  # no-member ('Field'.get)
             attrs=dict(self.attrs_d.get(name, {})),
         )

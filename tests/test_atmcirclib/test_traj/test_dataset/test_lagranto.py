@@ -413,9 +413,31 @@ class Test_ConvertLagrantoToCosmo:
         """Create a COSMO dataset."""
         return create_cosmo_ds()
 
+    def compare_vars(self, v1: xr.DataArray, v2: xr.DataArray, name: str = "") -> None:
+        """Compare two variables."""
+        assert v1.name == v2.name
+        if name:
+            assert v1.name == name
+        assert v1.dims == v2.dims
+        assert v1.dtype == v2.dtype
+        assert (v1.data == v2.data).all()
+        assert v1.attrs == v2.attrs
+
+    def test_time(self) -> None:
+        """Compare coordinate variable 'time'."""
+        self.compare_vars(self.ds_lagra.time, self.ds_cosmo.time, "time")
+
+    def test_coords(self) -> None:
+        """Compare coordinate variables."""
+        coords_lagra = self.ds_lagra.coords
+        coords_cosmo = self.ds_lagra.coords
+        assert coords_lagra.keys() == coords_cosmo.keys()
+        for name, coord_lagra in coords_lagra.items():
+            self.compare_vars(coord_lagra, coords_cosmo[name])
+
     def test_attrs(self) -> None:
-        """Test global dataset attributes."""
-        lagra_attrs = dict(self.ds_lagra.attrs)
-        cosmo_attrs = dict(self.ds_cosmo.attrs)
-        lagra_attrs.pop("_orig")
-        assert lagra_attrs == cosmo_attrs
+        """Compare global dataset attributes."""
+        attrs_lagra = dict(self.ds_lagra.attrs)
+        attrs_cosmo = dict(self.ds_cosmo.attrs)
+        attrs_lagra.pop("_orig")
+        assert attrs_lagra == attrs_cosmo
