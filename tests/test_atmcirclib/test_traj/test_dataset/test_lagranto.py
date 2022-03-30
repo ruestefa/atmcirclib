@@ -403,7 +403,6 @@ class Test_ConvertLagrantoToCosmo:
         """Create a LAGRANTO dataset."""
         return convert_traj_ds_lagranto_to_cosmo(
             ds=create_lagranto_ds(),
-            rotate_back=True,
             pole_lon=ROT_POLE_LON,
             pole_lat=ROT_POLE_LAT,
         )
@@ -420,7 +419,10 @@ class Test_ConvertLagrantoToCosmo:
             assert v1.name == name
         assert v1.dims == v2.dims
         assert v1.dtype == v2.dtype
-        assert (v1.data == v2.data).all()
+        try:
+            assert np.allclose(v1.data, v2.data)
+        except TypeError:
+            assert np.array_equal(v1.data, v2.data)
         assert v1.attrs == v2.attrs
 
     def test_time(self) -> None:
@@ -434,6 +436,20 @@ class Test_ConvertLagrantoToCosmo:
         assert coords_lagra.keys() == coords_cosmo.keys()
         for name, coord_lagra in coords_lagra.items():
             self.compare_vars(coord_lagra, coords_cosmo[name])
+
+    def test_lon_lat(self) -> None:
+        """Compare lon/lat in back-rotated coordinates."""
+        self.compare_vars(self.ds_lagra.longitude, self.ds_cosmo.longitude)
+        self.compare_vars(self.ds_lagra.latitude, self.ds_cosmo.latitude)
+
+    def test_lon_lat_norot(self) -> None:
+        """Compare lon/lat in non-rotated coordinates."""
+        ds_lagra = convert_traj_ds_lagranto_to_cosmo(ds=create_lagranto_ds())
+        mask = np.array(LAGRANTO_RAW_DATA_D["z"]) == LAGRANTO_VNAN
+        lon = np.where(mask, LAGRANTO_VNAN, np.array(LAGRANTO_RAW_DATA_D["lon"]))
+        lat = np.where(mask, LAGRANTO_VNAN, np.array(LAGRANTO_RAW_DATA_D["lat"]))
+        assert np.allclose(ds_lagra.longitude.data, lon)
+        assert np.allclose(ds_lagra.latitude.data, lat)
 
     def test_attrs(self) -> None:
         """Compare global dataset attributes."""

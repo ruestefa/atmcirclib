@@ -4,8 +4,10 @@ from __future__ import annotations
 # Standard library
 from typing import Any
 from typing import cast
+from typing import Optional
 
 # Third-party
+import cartopy.crs as ccrs
 import numpy as np
 import numpy.typing as npt
 import xarray as xr
@@ -75,15 +77,24 @@ class TrajDsLagrantoToCosmoConverter:
         },
     }
 
+    var_scale_fact_d: dict[str, float] = {
+        "P": 100,  # hPa => Pa
+    }
+
     def __init__(
         self,
         *,
-        rotate_back: bool = False,
+        vnan: float = -999.0,
+        rotate: Optional[bool] = None,
         pole_lon: float = 180.0,
         pole_lat: float = 90.0,
     ) -> None:
         """Create a new instance."""
-        self.rotate_back: bool = rotate_back
+        if rotate is None:
+            # Activate rotation if pole coords. passed, otherwise not
+            rotate = (pole_lon, pole_lat) != (180.0, 90.0)
+        self.vnan: float = vnan
+        self.rotate: bool = rotate
         self.pole_lon: float = pole_lon
         self.pole_lat: float = pole_lat
         self._ds: xr.Dataset
@@ -108,18 +119,59 @@ class TrajDsLagrantoToCosmoConverter:
         """
         time_arr = self._prep_time_data("timedelta64[ns]")
         time_name = "time"
-        da_time = xr.DataArray(
+        time_da = xr.DataArray(
             name=time_name,
             data=time_arr,
             coords={time_name: time_arr},
             dims=(time_name,),
             attrs=dict(self.var_attrs_d.get(time_name, {})),
         )
-        return {"time": da_time}
+        return {"time": time_da}
 
     def _convert_data_vars(self) -> dict[str, xr.DataArray]:
         """Convert data variables."""
-        return {}
+        dims = ("time", "id")
+        data_vars: dict[str, xr.DataArray] = {}
+
+        lon_arr, lat_arr = self._prepare_lon_lat()
+        lon_name = "longitude"
+        data_vars[lon_name] = xr.DataArray(
+            name=lon_name,
+            data=lon_arr,
+            dims=dims,
+            attrs=dict(self.var_attrs_d.get(lon_name, {})),
+        )
+        lat_name = "latitude"
+        data_vars[lat_name] = xr.DataArray(
+            name=lat_name,
+            data=lat_arr,
+            dims=dims,
+            attrs=dict(self.var_attrs_d.get(lat_name, {})),
+        )
+
+        return data_vars
+
+    def _prepare_lon_lat(self) -> tuple[npt.NDArray[np.float_], npt.NDArray[np.float_]]:
+        """Convert longitude and latitude, optionally with rotated-pole."""
+        lon = self._ds.lon.data.copy()
+        lat = self._ds.lat.data.copy()
+        # Use z to locate NaNs as lon/lat (may) contain invalid missing values
+        # (-999 not kept out of coordinate back-rotation by LAGRANTO)
+        nan_mask = self._ds.z.data == self.vnan
+        if self.rotate:
+            lon[nan_mask] = np.nan
+            lat[nan_mask] = np.nan
+            # pylint: disable=E0110  # abstract-class-instantiated (ccrs.*)
+            proj_rot = ccrs.RotatedPole(
+                pole_longitude=self.pole_lon, pole_latitude=self.pole_lat
+            )
+            proj_geo = ccrs.PlateCarree()
+            lon, lat, _ = np.moveaxis(
+                proj_rot.transform_points(proj_geo, lon, lat), 2, 0
+            )
+        lon[nan_mask] = self.vnan
+        lat[nan_mask] = self.vnan
+        return (lon.astype(np.float32), lat.astype(np.float32))
 
     def _convert_attrs(self) -> dict[str, Any]:
         """Convert global dataset attributes."""
