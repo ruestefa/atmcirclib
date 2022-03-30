@@ -17,7 +17,7 @@ from atmcirclib.typing import PathLike_T
 
 if TYPE_CHECKING:
     # Local
-    from .traj_dataset import TrajDataset
+    from .dataset import TrajDataset
 
 
 class TrajStartDataset:

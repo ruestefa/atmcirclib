@@ -22,7 +22,7 @@ from atmcirclib.typing import PathLike_T
 # Local
 from .criteria import Criteria
 from .criteria import Criterion
-from .traj_start_dataset import TrajStartDataset
+from .start_dataset import TrajStartDataset
 
 
 class TrajDataset:

@@ -20,7 +20,7 @@ from atmcirclib.cosmo import COSMOGridDataset
 
 if TYPE_CHECKING:
     # Local
-    from .traj_dataset import TrajDataset
+    from .dataset import TrajDataset
 
 __all__: list[str] = [
     "AllCriterion",
