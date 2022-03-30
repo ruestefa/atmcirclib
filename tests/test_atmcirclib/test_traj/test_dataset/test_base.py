@@ -237,8 +237,8 @@ traj_ds_factory = TrajDatasetDsFactory(
 )
 create_traj_ds = traj_ds_factory.run
 
-REF_DATA_D = traj_ds_factory.ref_data_d
-REF_COORDS_D = traj_ds_factory.ref_coords_d
+REF_DATA_D = traj_ds_factory.data_d
+REF_COORDS_D = traj_ds_factory.coords_d
 
 
 class Test_TestData:
