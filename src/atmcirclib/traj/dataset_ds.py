@@ -2,9 +2,9 @@
 from __future__ import annotations
 
 # Standard library
-import dataclasses as dc
+from collections.abc import Mapping
 from typing import Any
-from typing import cast
+from typing import Optional
 from typing import Union
 
 # Third-party
@@ -22,27 +22,46 @@ def create_traj_dataset_ds(**kwargs: Any) -> xr.Dataset:
     return TrajDatasetDsFactory(**kwargs).run()
 
 
-@dc.dataclass()
 class TrajDatasetDsFactory:
     """Create a trajectories file dataset in COSMO output format."""
 
-    attrs: dict[str, Any] = dc.field(default_factory=dict)
-    dims: tuple[str, str] = ("time", "id")
-    raw_coords_d: dict[str, list[float]] = dc.field(default_factory=dict)
-    raw_data_d: dict[str, list[list[float]]] = dc.field(default_factory=dict)
-    attrs_d: dict[str, dict[str, str]] = dc.field(default_factory=dict)
-    dtype_d: dict[str, npt.DTypeLike] = dc.field(default_factory=dict)
-    scale_fact_d: dict[str, float] = dc.field(default_factory=dict)
-    vnan: float = -999.0
+    # pylint: disable=R0902  # too-many-instance-attributes (>7)
 
-    def __post_init__(self) -> None:
-        """Finalize initialization."""
-        self.data_d: dict[str, npt.NDArray[np.generic]] = self._prepare_ref_arrs(
-            self.raw_data_d
-        )
-        self.coords_d: dict[str, npt.NDArray[np.generic]] = self._prepare_ref_arrs(
-            self.raw_coords_d
-        )
+    def __init__(
+        self,
+        *,
+        dims: Optional[tuple[str, str]] = None,
+        coords_d: Optional[
+            Union[
+                dict[str, list[float]],
+                dict[str, npt.NDArray[np.generic]],
+            ]
+        ] = None,
+        data_d: Optional[
+            Union[
+                dict[str, list[list[float]]],
+                dict[str, npt.NDArray[np.generic]],
+            ]
+        ] = None,
+        dtype_d: Optional[Mapping[str, npt.DTypeLike]] = None,
+        scale_fact_d: Optional[Mapping[str, float]] = None,
+        attrs_d: Optional[Mapping[str, Mapping[str, Any]]] = None,
+        attrs: Optional[Mapping[str, Any]] = None,
+        vnan: Optional[float] = None,
+    ) -> None:
+        """Create a new instance."""
+        self.dims: tuple[str, str] = dims or ("time", "id")
+        self.coords_d: dict[str, npt.NDArray[np.generic]]
+        self.data_d: dict[str, npt.NDArray[np.generic]]
+        self.dtype_d: dict[str, npt.DTypeLike] = dict(dtype_d or {})
+        self.scale_fact_d: dict[str, float] = dict(scale_fact_d or {})
+        self.attrs_d: dict[str, dict[str, Any]] = {
+            n: dict(v) for n, v in (attrs_d or {}).items()
+        }
+        self.attrs: dict[str, Any] = dict(attrs or {})
+        self.vnan: float = vnan if vnan is not None else -999.0
+        self.coords_d = self._prepare_arrs(coords_d) if coords_d else {}
+        self.data_d = self._prepare_arrs(data_d) if data_d else {}
 
     def run(self) -> xr.Dataset:
         """Return a new dataset, optionally with changed arguments."""
@@ -76,26 +95,23 @@ class TrajDatasetDsFactory:
             attrs=dict(self.attrs_d.get(name, {})),
         )
 
-    def _prepare_ref_arrs(
+    def _prepare_arrs(
         self,
         raw_arrs: Union[
-            dict[str, list[float]],
-            dict[str, list[list[float]]],
-            dict[str, npt.NDArray[np.generic]],
+            Mapping[str, list[float]],
+            Mapping[str, list[list[float]]],
+            Mapping[str, npt.NDArray[np.generic]],
         ],
     ) -> dict[str, npt.NDArray[np.generic]]:
         """Turn raw value lists into properly scaled data arrays."""
-        if not raw_arrs or isinstance(next(iter(raw_arrs.values())), np.ndarray):
-            assert all(isinstance(v, np.ndarray) for v in raw_arrs.values())
-            return {
-                name: cast(npt.NDArray[np.generic], arr.copy())
-                for name, arr in raw_arrs.items()
-            }
-        ref_arrs: dict[str, npt.NDArray[np.generic]] = {}
+        arrs_by_name: dict[str, npt.NDArray[np.generic]] = {}
         arr: npt.NDArray[np.generic]
-        for name, raw_data in raw_arrs.items():
-            # pylint: disable=E1101  # no-member ('Field'.get)
-            arr = np.array(raw_data, self.dtype_d.get(name, np.float32))
+        for name, data in raw_arrs.items():
+            if isinstance(data, np.ndarray):
+                arr = data
+            else:
+                # pylint: disable=E1101  # no-member ('Field'.get)
+                arr = np.array(data, self.dtype_d.get(name, np.float32))
             # pylint: disable=E1135  # unsupported-membership-test (scale_fact_d)
             if name in self.scale_fact_d:
                 arr = np.where(
@@ -104,5 +120,5 @@ class TrajDatasetDsFactory:
                     self.vnan,
                     arr * self.scale_fact_d[name],
                 )
-            ref_arrs[name] = arr
-        return ref_arrs
+            arrs_by_name[name] = arr
+        return arrs_by_name
