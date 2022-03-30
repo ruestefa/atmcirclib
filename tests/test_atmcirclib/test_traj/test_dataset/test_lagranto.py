@@ -432,6 +432,10 @@ class Test_ConvertLagrantoToCosmo:
             assert np.array_equal(v1.data, v2.data)
         assert v1.attrs == v2.attrs
 
+    def test_dims(self) -> None:
+        """Compare dimensions."""
+        assert self.ds_lagra.dims == self.ds_cosmo.dims
+
     def test_time(self) -> None:
         """Compare coordinate variable 'time'."""
         self.compare_vars(self.ds_lagra.time, self.ds_cosmo.time, "time")
