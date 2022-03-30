@@ -170,8 +170,8 @@ class TrajDataset:
         path: PathLike_T,
         format: str = "cosmo",
         *,
-        rot_pole_lon: float = 180.0,
-        rot_pole_lat: float = 90.0,
+        pole_lon: float = 180.0,
+        pole_lat: float = 90.0,
         **config_kwargs: Any,
     ) -> TrajDataset:
         """Read trajs dataset from file."""
@@ -183,7 +183,7 @@ class TrajDataset:
             pass
         elif format == "lagranto":
             ds = convert_traj_ds_lagranto_to_cosmo(
-                ds, rot_pole_lon=rot_pole_lon, rot_pole_lat=rot_pole_lat
+                ds, pole_lon=pole_lon, pole_lat=pole_lat
             )
         else:
             raise ValueError(f"invalid format '{format}'; choices: 'cosmo', 'lagranto'")
