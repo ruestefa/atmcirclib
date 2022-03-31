@@ -4,6 +4,7 @@ from __future__ import annotations
 # Standard library
 import dataclasses as dc
 import datetime as dt
+import enum
 from collections.abc import Sequence
 from typing import Any
 from typing import cast
@@ -26,6 +27,44 @@ from .lagranto import convert_traj_ds_lagranto_to_cosmo
 from .start_dataset import TrajStartDataset
 
 
+class TrajDirection(enum.Enum):
+    """Direction of trajectories in time."""
+
+    FW = "forward"
+    BW = "backward"
+
+    @classmethod
+    def from_steps(cls, steps: Sequence[int]) -> TrajDirection:
+        """Create a new instance from time steps."""
+        if len(steps) < 2:
+            raise ValueError(f"require at least two steps, got {steps}")
+        if steps[0] < steps[-1]:
+            return cls.FW
+        elif steps[0] > steps[-1]:
+            return cls.BW
+        else:
+            raise ValueError(f"invalid steps: {steps}")
+
+
+TrajDirectionLike_T = Union[TrajDirection, str]
+
+
+class TrajModel(enum.Enum):
+    """Model with wich the trajectories have been computed."""
+
+    UNKNOWN = None
+    COSMO = "cosmo"
+    LAGRANTO = "lagranto"
+
+    def check_consistency(self, direction: TrajDirectionLike_T) -> None:
+        """Check whether the traj direction is consistent with the model."""
+        if self.value == self.COSMO and TrajDirection(direction) == TrajDirection.BW:
+            raise ValueError("COSMO online trajectories cannot run backward")
+
+
+TrajModelLike_T = Union[TrajModel, Optional[str]]
+
+
 class TrajDataset:
     """A trajectories dataset as written by COSMO online trajs module."""
 
@@ -46,11 +85,19 @@ class TrajDataset:
     class MissingConfigError(Exception):
         """Missing an entry in ``Config``."""
 
-    def __init__(self, ds: xr.Dataset, **config_kwargs: Any) -> None:
+    def __init__(
+        self,
+        ds: xr.Dataset,
+        *,
+        model: TrajModelLike_T = None,
+        **config_kwargs: Any,
+    ) -> None:
         """Create a new instance."""
         self.config: TrajDataset.Config = self.Config(**config_kwargs)
         self.ds: xr.Dataset = ds
-        self.meta = TrajDatasetMetadata(self)
+        self.model: TrajModel = TrajModel(model)
+        self.direction: TrajDirection = TrajDirection.from_steps(ds.time.data)
+        self.model.check_consistency(self.direction)
 
     def count(self, criteria: Optional[Criteria] = None) -> int:
         """Count all trajs that fulfill the given criteria.
