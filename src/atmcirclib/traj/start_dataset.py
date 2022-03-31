@@ -31,7 +31,7 @@ class TrajStartDataset:
         self.ds: xr.Dataset = ds
 
     def derive_bin_edges(
-        self, *, extrapolate: bool = True
+        self, *, nmax: Optional[int] = None, extrapolate: bool = True
     ) -> tuple[npt.NDArray[np.float_], npt.NDArray[np.float_], npt.NDArray[np.float_]]:
         """Derive edges of point-centered bins in ``(lon, lat, z)`` coordinates.
 
@@ -39,6 +39,8 @@ class TrajStartDataset:
         optional end point obtained by extrapolation.
 
         Args:
+            nmax (optional): Maximum number of bins in each direction.
+
             extrapolate (optional): Add additional bins in the beginning and
                 end that include the first and last point, respectively, along
                 each dimension.
@@ -48,6 +50,10 @@ class TrajStartDataset:
         def centers_to_edges(centers: npt.NDArray[np.float_]) -> npt.NDArray[np.float_]:
             """Obtain bin boundaries between points."""
             inner_edges = np.mean([centers[:-1], centers[1:]], axis=0)
+            if nmax is not None:
+                assert nmax > 0
+                while inner_edges.size > nmax:
+                    inner_edges = inner_edges[::2]
             if not extrapolate:
                 edges = inner_edges
             else:
@@ -92,11 +98,12 @@ class TrajStartDataset:
         """Derive start points from trajectories."""
         if verbose:
             print("derive start points from trajs")
+        idx = 0
         return cls(
             cls._init_dataset(
-                trajs.ds.longitude.data[0],
-                trajs.ds.latitude.data[0],
-                trajs.ds.z.data[0],
+                trajs.ds.longitude.data[idx],
+                trajs.ds.latitude.data[idx],
+                trajs.ds.z.data[idx],
             )
         )
 
