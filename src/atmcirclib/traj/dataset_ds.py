@@ -107,11 +107,8 @@ class TrajDatasetDsFactory:
         arrs_by_name: dict[str, npt.NDArray[np.generic]] = {}
         arr: npt.NDArray[np.generic]
         for name, data in raw_arrs.items():
-            if isinstance(data, np.ndarray):
-                arr = data
-            else:
-                # pylint: disable=E1101  # no-member ('Field'.get)
-                arr = np.array(data, self.dtype_d.get(name, np.float32))
+            # pylint: disable=E1101  # no-member ('Field'.get)
+            arr = np.asarray(data, self.dtype_d.get(name, np.float32))
             # pylint: disable=E1135  # unsupported-membership-test (scale_fact_d)
             if name in self.scale_fact_d:
                 arr = np.where(
