@@ -14,4 +14,4 @@
 /venvs/
 __pycache__/
 .tox/
-/data/
+/data
