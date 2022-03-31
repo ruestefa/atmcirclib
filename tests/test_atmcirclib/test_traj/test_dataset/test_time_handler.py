@@ -35,6 +35,8 @@ def create_time_handler(
     model: Optional[str] = None,
 ) -> TrajTimeHandler:
     """Create a traj time handler from given time steps and attributes."""
+    # pylint: disable=R0913  # too-many-arguments (>5)
+    # pylint: disable=W0622  # redefined-builtin (min)
     if isinstance(dtype, str) and dtype.startswith("[") and dtype.endswith("]"):
         # Shorthand for timedelta: Unit only, e.g., '[h]', '[m]', '[s]'
         dtype = f"timedelta64{dtype}"
@@ -66,7 +68,7 @@ class Test_GetStart:
         """Forward trajs with unspecified model."""
         ref = (1990, 2, 24, 21)
         th = create_time_handler(
-            *ref, steps=np.arange(10), dtype="[m]", step_sec=60, dur_sec=600
+            *ref, steps=np.arange(11), dtype="[m]", step_sec=60, dur_sec=600
         )
         ref_dt = dt.datetime(*ref)
         assert th.get_start() == ref_dt
@@ -88,7 +90,7 @@ class Test_GetStart:
         ref = (1990, 2, 24, 21)
         th = create_time_handler(
             *ref,
-            steps=np.arange(10),
+            steps=np.arange(11),
             dtype="[m]",
             step_sec=60,
             dur_sec=600,
@@ -106,7 +108,7 @@ class Test_GetStart:
         ref = (1990, 2, 24, 21)
         th = create_time_handler(
             *ref,
-            steps=np.arange(10),
+            steps=np.arange(11),
             dtype="[m]",
             step_sec=60,
             dur_sec=600,
@@ -120,7 +122,7 @@ class Test_GetStart:
         ref = (1990, 2, 24, 21)
         th = create_time_handler(
             *ref,
-            steps=-np.arange(10),
+            steps=-np.arange(11),
             dtype="[m]",
             step_sec=-60,
             dur_sec=-600,
@@ -135,7 +137,7 @@ class Test_GetStart:
             create_time_handler(
                 1990,
                 2,
-                steps=-np.arange(10),
+                steps=-np.arange(11),
                 dtype="[m]",
                 step_sec=-60,
                 dur_sec=-600,
@@ -149,7 +151,7 @@ class Test_GetAbsSteps:
     def test_forward(self) -> None:
         """Forward trajs."""
         ref = (1990, 2, 24, 21)
-        steps = np.arange(10)
+        steps = np.arange(11)
         dtype = "timedelta64[h]"
         th = create_time_handler(
             *ref, steps=steps, dtype=dtype, step_sec=3600, dur_sec=36_000
@@ -159,11 +161,13 @@ class Test_GetAbsSteps:
         assert ref_steps[0] == ref_dt
         assert th.get_abs_steps() == ref_steps
         assert th.get_abs_steps(slice(None, None, 2)) == ref_steps[slice(None, None, 2)]
+        with pytest.raises(TypeError):
+            th.get_abs_steps(1)  # type: ignore
 
     def test_forward_later(self) -> None:
         """Forward trajs, starting later than model."""
         ref = (1990, 2, 24, 21)
-        steps = np.arange(100, 110)
+        steps = np.arange(100, 111)
         dtype = "timedelta64[h]"
         th = create_time_handler(
             *ref, steps=steps, dtype=dtype, step_sec=3600, dur_sec=36_000
@@ -172,12 +176,12 @@ class Test_GetAbsSteps:
         ref_steps = (ref_dt + steps.astype(dtype).astype(dt.timedelta)).tolist()
         assert ref_steps[0] != ref_dt
         assert th.get_abs_steps() == ref_steps
-        assert th.get_abs_steps(7) == ref_steps[7]
+        assert th.get_abs_steps([7]) == ref_steps[7:8]
 
     def test_backward(self) -> None:
         """Backward trajs."""
         ref = (1990, 2, 24, 21)
-        steps = -np.arange(50, 70, 2)
+        steps = -np.arange(50, 71, 2)
         dtype = "timedelta64[m]"
         th = create_time_handler(
             *ref, steps=steps, dtype=dtype, step_sec=-120, dur_sec=-1200
@@ -187,3 +191,53 @@ class Test_GetAbsSteps:
         assert ref_steps[0] != ref_dt
         assert th.get_abs_steps() == ref_steps
         assert th.get_abs_steps([4, 7, 9]) == np.array(ref_steps)[[4, 7, 9]].tolist()
+
+
+class Test_GetHoursSinceStart:
+    """Get the time since start at a given step in hours."""
+
+    def test_forward_full(self) -> None:
+        """Forward trajs, targeting full hours only."""
+        ref = (1990, 2, 24, 21)
+        th = create_time_handler(
+            *ref,
+            steps=np.arange(60, 241, 20),
+            dtype="[m]",
+            step_sec=20 * 60,
+            dur_sec=20 * 60 * 3,
+        )
+        assert th.get_hours_since_start(0) == 0
+        assert th.get_hours_since_start(3) == 1
+        assert th.get_hours_since_start(6) == 2
+        assert th.get_hours_since_start(9) == 3
+        assert th.get_hours_since_start(-1) == 3
+
+    def test_forward_fraction(self) -> None:
+        """Forward trajs, targeting any steps."""
+        ref = (1990, 2, 24, 21)
+        th = create_time_handler(
+            *ref,
+            steps=np.arange(60, 241, 20),
+            dtype="[m]",
+            step_sec=20 * 60,
+            dur_sec=20 * 60 * 3,
+        )
+        assert th.get_hours_since_start(1) == 1 / 3
+        assert th.get_hours_since_start(2) == 2 / 3
+        assert th.get_hours_since_start(-2) == 2 + 2 / 3
+
+    def test_backward(self) -> None:
+        """Backward trajs."""
+        ref = (1990, 2, 24, 21)
+        th = create_time_handler(
+            *ref,
+            steps=np.arange(60, 241, 20)[::-1],
+            dtype="[m]",
+            step_sec=20 * 60,
+            dur_sec=20 * 60 * 3,
+        )
+        assert th.get_hours_since_start(0) == -0
+        assert th.get_hours_since_start(3) == -1
+        assert th.get_hours_since_start(6) == -2
+        assert th.get_hours_since_start(9) == -3
+        assert th.get_hours_since_start(-1) == -3

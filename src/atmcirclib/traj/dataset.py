@@ -260,7 +260,7 @@ class TrajTimeHandler:
         return self.get_abs_steps(idcs=[idx])[0]
 
     def get_abs_steps(
-        self, idcs: Union[int, Sequence[int], slice] = slice(None)
+        self, idcs: Union[Sequence[int], slice] = slice(None)
     ) -> list[dt.datetime]:
         """Get given steps as absolute datetimes.
 
@@ -268,6 +268,9 @@ class TrajTimeHandler:
             idcs (optional): Indices or slice to return only a subset of steps.
 
         """
+        if isinstance(idcs, int):
+            # Should be caught by mypy, but double-checking cannot hurt
+            raise TypeError(f"wrap individual indices in list: [{idcs}]")
         rel_times = (
             # TODO move this convertion into a utility function
             self.trajs.ds.time.data[idcs]
@@ -277,6 +280,15 @@ class TrajTimeHandler:
         abs_time = np.asarray((self._get_dt_ref() + rel_times)).tolist()
         # mypy thinks return type is Any (mypy v0.941, numpy v1.22.3)
         return cast(list[dt.datetime], abs_time)
+
+    def get_hours_since_start(self, idx_time: int) -> float:
+        """Get the time since start at a given step in (fractional) hours."""
+        abs_start: dt.datetime = self.get_start()
+        abs_target: dt.datetime = self.get_abs_steps([idx_time])[0]
+        rel_target: dt.timedelta = abs_target - abs_start
+        rel_target_h: float = rel_target.total_seconds() / 3600
+        assert rel_target_h * 3600.0 == rel_target.total_seconds()
+        return rel_target_h
 
     # ++++ UNTESTED ++++  # TODO remove this once everything is tested
 
@@ -315,15 +327,6 @@ class TrajTimeHandler:
             units_fmtd = ", ".join(map("'{}'".format, facts_by_unit))
             raise ValueError(f"invalid unit '{unit}'; choices: {units_fmtd}") from e
         return [dt_.total_seconds() * fact for dt_ in start_rel_times]
-
-    def get_hours_since_start(self, idx_time: int) -> int:
-        """Convert a time index into relative hours since the trajs start."""
-        abs_target_time = self.get_abs_steps([idx_time])[0]
-        abs_start_time = self.get_start()
-        rel_target_time = abs_target_time - abs_start_time
-        rel_target_hours = int(rel_target_time.total_seconds() / 3600)
-        assert rel_target_hours * 3600.0 == rel_target_time.total_seconds()
-        return rel_target_hours
 
     def format_abs_time(
         self, idcs: Union[Sequence[int], slice] = slice(None)
