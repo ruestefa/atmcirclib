@@ -228,8 +228,6 @@ class TrajDataset:
             ds = convert_traj_ds_lagranto_to_cosmo(
                 ds, pole_lon=pole_lon, pole_lat=pole_lat
             )
-        else:
-            raise ValueError(f"invalid model '{model}'; choices: 'cosmo', 'lagranto'")
         return cls(ds=ds, model=model, **config_kwargs)
 
 
@@ -281,10 +279,12 @@ class TrajTimeHandler:
         # mypy thinks return type is Any (mypy v0.941, numpy v1.22.3)
         return cast(list[dt.datetime], abs_time)
 
+    # TODO consider turning idx_time into idcs_time, consistent with get_abs_steps
     def get_hours_since_start(self, idx_time: int) -> float:
         """Get the time since start at a given step in (fractional) hours."""
         return self.get_duration_since_start(idx_time).total_seconds() / 3600
 
+    # TODO consider turning idx_time into idcs_time, consistent with get_abs_steps
     def get_duration_since_start(self, idx_time: int) -> dt.timedelta:
         """Get the duration since start as a timedelta."""
         abs_start: dt.datetime = self.get_start()
