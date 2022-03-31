@@ -283,12 +283,13 @@ class TrajTimeHandler:
 
     def get_hours_since_start(self, idx_time: int) -> float:
         """Get the time since start at a given step in (fractional) hours."""
+        return self.get_duration_since_start(idx_time).total_seconds() / 3600
+
+    def get_duration_since_start(self, idx_time: int) -> dt.timedelta:
+        """Get the duration since start as a timedelta."""
         abs_start: dt.datetime = self.get_start()
         abs_target: dt.datetime = self.get_abs_steps([idx_time])[0]
-        rel_target: dt.timedelta = abs_target - abs_start
-        rel_target_h: float = rel_target.total_seconds() / 3600
-        assert rel_target_h * 3600.0 == rel_target.total_seconds()
-        return rel_target_h
+        return abs_target - abs_start
 
     # ++++ UNTESTED ++++  # TODO remove this once everything is tested
 
