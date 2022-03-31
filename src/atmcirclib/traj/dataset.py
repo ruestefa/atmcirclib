@@ -58,7 +58,11 @@ class TrajModel(enum.Enum):
 
     def check_consistency(self, direction: TrajDirectionLike_T) -> None:
         """Check whether the traj direction is consistent with the model."""
-        if self.value == self.COSMO and TrajDirection(direction) == TrajDirection.BW:
+        if (
+            # pylint: disable=W0143  # comparison-with-callable (value)
+            self.value == self.COSMO.value  # type: ignore  # ('str'.value)
+            and TrajDirection(direction) == TrajDirection.BW
+        ):
             raise ValueError("COSMO online trajectories cannot run backward")
 
 
@@ -86,11 +90,7 @@ class TrajDataset:
         """Missing an entry in ``Config``."""
 
     def __init__(
-        self,
-        ds: xr.Dataset,
-        *,
-        model: TrajModelLike_T = None,
-        **config_kwargs: Any,
+        self, ds: xr.Dataset, *, model: TrajModelLike_T = None, **config_kwargs: Any
     ) -> None:
         """Create a new instance."""
         self.config: TrajDataset.Config = self.Config(**config_kwargs)
@@ -98,6 +98,7 @@ class TrajDataset:
         self.model: TrajModel = TrajModel(model)
         self.direction: TrajDirection = TrajDirection.from_steps(ds.time.data)
         self.model.check_consistency(self.direction)
+        self.time = TrajTimeHandler(self)
 
     def count(self, criteria: Optional[Criteria] = None) -> int:
         """Count all trajs that fulfill the given criteria.
@@ -126,8 +127,7 @@ class TrajDataset:
         return self.select((criteria or Criteria()).invert())
 
     def get_traj_mask(
-        self,
-        criteria: Optional[Criteria] = None,
+        self, criteria: Optional[Criteria] = None
     ) -> npt.NDArray[np.bool_]:
         """Get a mask indicating which trajs fulfill a combination of criteria."""
 
@@ -187,9 +187,7 @@ class TrajDataset:
             arr[arr == self.config.nan] = np.nan
         return arr
 
-    def get_start_points(
-        self,
-    ) -> TrajStartDataset:
+    def get_start_points(self) -> TrajStartDataset:
         """Get start points."""
         return TrajStartDataset.from_trajs(self)
 
@@ -215,37 +213,53 @@ class TrajDataset:
     def from_file(
         cls,
         path: PathLike_T,
-        format: str = "cosmo",
+        model: TrajModelLike_T = "cosmo",
         *,
         pole_lon: float = 180.0,
         pole_lat: float = 90.0,
         **config_kwargs: Any,
     ) -> TrajDataset:
         """Read trajs dataset from file."""
-        # pylint: disable=W0622  # redefined-builtin (format)
         try:
             ds = xr.open_dataset(path)
         except Exception as e:
             raise ValueError(f"error opening trajectories files '{path}'") from e
-        if format == "cosmo":
-            pass
-        elif format == "lagranto":
+        if TrajModel(model) == TrajModel.LAGRANTO:
             ds = convert_traj_ds_lagranto_to_cosmo(
                 ds, pole_lon=pole_lon, pole_lat=pole_lat
             )
         else:
-            raise ValueError(f"invalid format '{format}'; choices: 'cosmo', 'lagranto'")
-        return cls(ds=ds, **config_kwargs)
+            raise ValueError(f"invalid model '{model}'; choices: 'cosmo', 'lagranto'")
+        return cls(ds=ds, model=model, **config_kwargs)
 
 
 # TODO Clean this class up: Consistent methods (names, return types), tests etc.
 # NOTE Derived from remnants of temporary ExtendedTrajDataset, therefore messy
-class TrajDatasetMetadata:
+class TrajTimeHandler:
     """Metadata handler for traj dataset."""
 
     def __init__(self, trajs: TrajDataset) -> None:
         """Create a new instance."""
         self.trajs: TrajDataset = trajs
+
+    def get_start(self) -> dt.datetime:
+        """Get the first time step in the file, optionally as a string."""
+        if self.trajs.model == TrajModel.COSMO:
+            # Note (2022-02-04):
+            # Don't use the first time step because it corresponds to the last
+            # model time step before the start of the trajs (the time always
+            # corresponds to the end of the model time step AFTER the trajs have
+            # been incremented)
+            # Example for dt=10s, dt_trace=60s:
+            # [2016-09-24_23:59:50, 2016-09-25_00:00:00, 2016-09-25_00:01:00, ...]
+            # What we want instead is the second step.
+            # Eventually, this should be implemented in COSMO more consistently!
+            idx = 1
+        else:
+            idx = 0
+        return self._get_abs_times(idcs=[idx])[0]
+
+    # ++++ UNTESTED ++++  # TODO remove this once everything is tested
 
     # TODO Fix inconsistency that this method returns float, others dt.datetime
     def get_times_rel_start(
@@ -257,7 +271,7 @@ class TrajDatasetMetadata:
     ) -> list[float]:
         """Get the time steps as duration since start in the given unit."""
         if start is None:
-            start = self._get_start()
+            start = self.get_start()
         if ref is None:
             ref = self._get_dt_ref()
         ref_rel_times = (
@@ -286,7 +300,7 @@ class TrajDatasetMetadata:
     def get_hours_since_start(self, idx_time: int) -> int:
         """Convert a time index into relative hours since the trajs start."""
         abs_target_time = self._get_abs_times([idx_time])[0]
-        abs_start_time = self._get_start()
+        abs_start_time = self.get_start()
         rel_target_time = abs_target_time - abs_start_time
         rel_target_hours = int(rel_target_time.total_seconds() / 3600)
         assert rel_target_hours * 3600.0 == rel_target_time.total_seconds()
@@ -335,41 +349,24 @@ class TrajDatasetMetadata:
         # mypy thinks return type is Any (mypy v0.941, numpy v1.22.3)
         return cast(list[dt.datetime], abs_time)
 
-    def _get_start(self) -> dt.datetime:
-        """Get the first time step in the file, optionally as a string."""
-        # Note (2022-02-04):
-        # Don't use the first time step because it corresponds to the last
-        # model time step before the start of the trajs (the time always
-        # corresponds to the end of the model time step AFTER the trajs have
-        # been incremented)
-        # Example for dt=10s, dt_trace=60s:
-        #   [2016-09-24_23:59:50, 2016-09-25_00:00:00, 2016-09-25_00:01:00, ...]
-        # What we want instead is the second step.
-        # Eventually, this should be implemented in COSMO more consistently!
-        # Note (2022-03-30):
-        # This should not be done for LAGRANTO output files, only COSMO!
-        return self._get_abs_times(idcs=[1])[0]
-
     def _get_end(self) -> dt.datetime:
         """Get the last time step in the file, optionally as a string."""
         return self._get_abs_times(idcs=[-1])[0]
 
     def _get_duration(self) -> dt.timedelta:
         """Get the duration of the dataset."""
-        return self._get_end() - self._get_start()
+        return self._get_end() - self.get_start()
 
     def _format_duration(self) -> str:
         """Format the duration of the dataset."""
         return self._format_rel_time(self._get_end())
 
     def _format_rel_time(
-        self,
-        end: dt.datetime,
-        start: Optional[dt.datetime] = None,
+        self, end: dt.datetime, start: Optional[dt.datetime] = None
     ) -> str:
         """Format relative, by default since the start of the dataset."""
         if start is None:
-            start = self._get_start()
+            start = self.get_start()
         dur = end - start
         tot_secs = dur.total_seconds()
         hours = int(tot_secs / 3600)
