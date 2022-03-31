@@ -63,16 +63,16 @@ class Test_GetStart:
     """Get start datetime."""
 
     def test_forward(self) -> None:
-        """Get start time of forward simulation."""
+        """Forward trajs with unspecified model."""
         ref = (1990, 2, 24, 21)
         th = create_time_handler(
-            *ref, steps=np.arange(10), dtype="[m]", step_sec=60, dur_sec=3600
+            *ref, steps=np.arange(10), dtype="[m]", step_sec=60, dur_sec=600
         )
         ref_dt = dt.datetime(*ref)
         assert th.get_start() == ref_dt
 
     def test_forward_cosmo(self) -> None:
-        """Get start time of forward COSMO simulation with start time fix.
+        """Forward trajs with COSMO, with zeroth-step-fix.
 
         The fix constitutes skipping the zeroth time step, which has been
         manually added in order to add the start positions to the output file.
@@ -91,14 +91,14 @@ class Test_GetStart:
             steps=np.arange(10),
             dtype="[m]",
             step_sec=60,
-            dur_sec=3600,
+            dur_sec=600,
             model="cosmo",
         )
         ref_dt = dt.datetime(*ref) + dt.timedelta(seconds=60)
         assert th.get_start() == ref_dt
 
     def test_forward_lagranto(self) -> None:
-        """Get start time of forward LAGRANTO simulation.
+        """Forward trajs with LAGRANTO.
 
         The result is the same as w/o specifying a model.
 
@@ -109,23 +109,28 @@ class Test_GetStart:
             steps=np.arange(10),
             dtype="[m]",
             step_sec=60,
-            dur_sec=3600,
+            dur_sec=600,
             model="lagranto",
         )
         ref_dt = dt.datetime(*ref)
         assert th.get_start() == ref_dt
 
     def test_backward(self) -> None:
-        """Get start time of backward simulation."""
+        """Backward trajs with LAGRANTO."""
         ref = (1990, 2, 24, 21)
         th = create_time_handler(
-            *ref, steps=-np.arange(10), dtype="[m]", step_sec=-60, dur_sec=-3600
+            *ref,
+            steps=-np.arange(10),
+            dtype="[m]",
+            step_sec=-60,
+            dur_sec=-600,
+            model="lagranto",
         )
         ref_dt = dt.datetime(*ref)
         assert th.get_start() == ref_dt
 
     def test_backward_cosmo_fail(self) -> None:
-        """Backward simulation with COSMO is not possible."""
+        """Backward trajs with COSMO, which are impossible."""
         with pytest.raises(ValueError):
             create_time_handler(
                 1990,
@@ -133,6 +138,52 @@ class Test_GetStart:
                 steps=-np.arange(10),
                 dtype="[m]",
                 step_sec=-60,
-                dur_sec=-3600,
+                dur_sec=-600,
                 model="cosmo",
             )
+
+
+class Test_GetAbsSteps:
+    """Get given steps as absolute datetimes."""
+
+    def test_forward(self) -> None:
+        """Forward trajs."""
+        ref = (1990, 2, 24, 21)
+        steps = np.arange(10)
+        dtype = "timedelta64[h]"
+        th = create_time_handler(
+            *ref, steps=steps, dtype=dtype, step_sec=3600, dur_sec=36_000
+        )
+        ref_dt = dt.datetime(*ref)
+        ref_steps = (ref_dt + steps.astype(dtype).astype(dt.timedelta)).tolist()
+        assert ref_steps[0] == ref_dt
+        assert th.get_abs_steps() == ref_steps
+        assert th.get_abs_steps(slice(None, None, 2)) == ref_steps[slice(None, None, 2)]
+
+    def test_forward_later(self) -> None:
+        """Forward trajs, starting later than model."""
+        ref = (1990, 2, 24, 21)
+        steps = np.arange(100, 110)
+        dtype = "timedelta64[h]"
+        th = create_time_handler(
+            *ref, steps=steps, dtype=dtype, step_sec=3600, dur_sec=36_000
+        )
+        ref_dt = dt.datetime(*ref)
+        ref_steps = (ref_dt + steps.astype(dtype).astype(dt.timedelta)).tolist()
+        assert ref_steps[0] != ref_dt
+        assert th.get_abs_steps() == ref_steps
+        assert th.get_abs_steps(7) == ref_steps[7]
+
+    def test_backward(self) -> None:
+        """Backward trajs."""
+        ref = (1990, 2, 24, 21)
+        steps = -np.arange(50, 70, 2)
+        dtype = "timedelta64[m]"
+        th = create_time_handler(
+            *ref, steps=steps, dtype=dtype, step_sec=-120, dur_sec=-1200
+        )
+        ref_dt = dt.datetime(*ref)
+        ref_steps = (ref_dt + steps.astype(dtype).astype(dt.timedelta)).tolist()
+        assert ref_steps[0] != ref_dt
+        assert th.get_abs_steps() == ref_steps
+        assert th.get_abs_steps([4, 7, 9]) == np.array(ref_steps)[[4, 7, 9]].tolist()

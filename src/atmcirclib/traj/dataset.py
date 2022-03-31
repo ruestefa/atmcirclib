@@ -257,7 +257,26 @@ class TrajTimeHandler:
             idx = 1
         else:
             idx = 0
-        return self._get_abs_times(idcs=[idx])[0]
+        return self.get_abs_steps(idcs=[idx])[0]
+
+    def get_abs_steps(
+        self, idcs: Union[int, Sequence[int], slice] = slice(None)
+    ) -> list[dt.datetime]:
+        """Get given steps as absolute datetimes.
+
+        Args:
+            idcs (optional): Indices or slice to return only a subset of steps.
+
+        """
+        rel_times = (
+            # TODO move this convertion into a utility function
+            self.trajs.ds.time.data[idcs]
+            .astype("timedelta64[s]")
+            .astype(dt.timedelta)
+        )
+        abs_time = np.asarray((self._get_dt_ref() + rel_times)).tolist()
+        # mypy thinks return type is Any (mypy v0.941, numpy v1.22.3)
+        return cast(list[dt.datetime], abs_time)
 
     # ++++ UNTESTED ++++  # TODO remove this once everything is tested
 
@@ -275,7 +294,7 @@ class TrajTimeHandler:
         if ref is None:
             ref = self._get_dt_ref()
         ref_rel_times = (
-            # TODO move this convertion into a utility function
+            # TODO move this conversion into a utility function
             self.trajs.ds.time.data[idcs]
             .astype("timedelta64[s]")
             .astype(dt.timedelta)
@@ -299,7 +318,7 @@ class TrajTimeHandler:
 
     def get_hours_since_start(self, idx_time: int) -> int:
         """Convert a time index into relative hours since the trajs start."""
-        abs_target_time = self._get_abs_times([idx_time])[0]
+        abs_target_time = self.get_abs_steps([idx_time])[0]
         abs_start_time = self.get_start()
         rel_target_time = abs_target_time - abs_start_time
         rel_target_hours = int(rel_target_time.total_seconds() / 3600)
@@ -310,7 +329,7 @@ class TrajTimeHandler:
         self, idcs: Union[Sequence[int], slice] = slice(None)
     ) -> list[str]:
         """Format the time dimension as absolute datimes."""
-        abs_time = self._get_abs_times(idcs)
+        abs_time = self.get_abs_steps(idcs)
         return [dt_.strftime("%Y-%m-%d %H:%M:%S") for dt_ in abs_time]
 
     def format_start(self) -> str:
@@ -330,28 +349,9 @@ class TrajTimeHandler:
             self.trajs.ds.attrs["ref_sec"],
         )
 
-    def _get_abs_times(
-        self, idcs: Union[Sequence[int], slice] = slice(None)
-    ) -> list[dt.datetime]:
-        """Get the time dimension as absolute datimes.
-
-        Args:
-            idcs (optional): Indices or slice to return only a subset of steps.
-
-        """
-        rel_times = (
-            # TODO move this convertion into a utility function
-            self.trajs.ds.time.data[idcs]
-            .astype("timedelta64[s]")
-            .astype(dt.timedelta)
-        )
-        abs_time = (self._get_dt_ref() + rel_times).tolist()
-        # mypy thinks return type is Any (mypy v0.941, numpy v1.22.3)
-        return cast(list[dt.datetime], abs_time)
-
     def _get_end(self) -> dt.datetime:
         """Get the last time step in the file, optionally as a string."""
-        return self._get_abs_times(idcs=[-1])[0]
+        return self.get_abs_steps(idcs=[-1])[0]
 
     def _get_duration(self) -> dt.timedelta:
         """Get the duration of the dataset."""
