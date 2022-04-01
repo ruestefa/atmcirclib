@@ -132,9 +132,9 @@ class TrajStartDataset:
         idx = 0
         return cls(
             cls._init_dataset(
-                trajs.ds.longitude.data[idx],
-                trajs.ds.latitude.data[idx],
-                trajs.ds.z.data[idx],
+                trajs.get_data("longitude", idx_time=idx),
+                trajs.get_data("latitude", idx_time=idx),
+                trajs.get_data("z", idx_time=idx),
             )
         )
 
