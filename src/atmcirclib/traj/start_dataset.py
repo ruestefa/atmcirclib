@@ -6,6 +6,7 @@ from typing import Any
 from typing import cast
 from typing import Optional
 from typing import TYPE_CHECKING
+from typing import Union
 
 # Third-party
 import numpy as np
@@ -31,7 +32,10 @@ class TrajStartDataset:
         self.ds: xr.Dataset = ds
 
     def derive_bin_edges(
-        self, *, nmax: Optional[int] = None, extrapolate: bool = True
+        self,
+        *,
+        nmax: Optional[Union[int, tuple[int, int, int]]] = None,
+        extrapolate: bool = True,
     ) -> tuple[npt.NDArray[np.float_], npt.NDArray[np.float_], npt.NDArray[np.float_]]:
         """Derive edges of point-centered bins in ``(lon, lat, z)`` coordinates.
 
@@ -39,7 +43,7 @@ class TrajStartDataset:
         optional end point obtained by extrapolation.
 
         Args:
-            nmax (optional): Maximum number of bins in each direction.
+            nmax (optional): Maximum number of bins in all or each direction.
 
             extrapolate (optional): Add additional bins in the beginning and
                 end that include the first and last point, respectively, along
@@ -47,13 +51,18 @@ class TrajStartDataset:
 
         """
 
+        def reduce_precision(
+            points: npt.NDArray[np.float_], nmax: int, decimals: int = 6
+        ) -> npt.NDArray[np.float_]:
+            """Reduce the precision and thus the number of unique points."""
+            while points.size > np.abs(nmax):
+                points = np.unique(np.round(points, decimals=decimals))
+                decimals -= 1
+            return points
+
         def centers_to_edges(centers: npt.NDArray[np.float_]) -> npt.NDArray[np.float_]:
             """Obtain bin boundaries between points."""
             inner_edges = np.mean([centers[:-1], centers[1:]], axis=0)
-            if nmax is not None:
-                assert nmax > 0
-                while inner_edges.size > nmax:
-                    inner_edges = inner_edges[::2]
             if not extrapolate:
                 edges = inner_edges
             else:
@@ -65,10 +74,21 @@ class TrajStartDataset:
             # mypy thinks return type is Any (mypy v0.941, numpy v1.22.3)
             return cast(npt.NDArray[np.float_], edges)
 
+        centers_x: npt.NDArray[np.float_] = np.unique(self.ds.longitude.data)
+        centers_y: npt.NDArray[np.float_] = np.unique(self.ds.latitude.data)
+        centers_z: npt.NDArray[np.float_] = np.unique(self.ds.z.data)
+
+        if nmax is not None:
+            if isinstance(nmax, int):
+                nmax = (nmax, nmax, nmax)
+            centers_x = reduce_precision(centers_x, nmax[0])
+            centers_y = reduce_precision(centers_y, nmax[1])
+            centers_z = reduce_precision(centers_z, nmax[2])
+
         return (
-            centers_to_edges(np.unique(self.ds.longitude.data)),
-            centers_to_edges(np.unique(self.ds.latitude.data)),
-            centers_to_edges(np.unique(self.ds.z.data)),
+            centers_to_edges(centers_x),
+            centers_to_edges(centers_y),
+            centers_to_edges(centers_z),
         )
 
     @classmethod
