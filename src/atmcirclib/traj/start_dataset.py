@@ -51,15 +51,6 @@ class TrajStartDataset:
 
         """
 
-        def reduce_precision(
-            points: npt.NDArray[np.float_], nmax: int, decimals: int = 6
-        ) -> npt.NDArray[np.float_]:
-            """Reduce the precision and thus the number of unique points."""
-            while points.size > np.abs(nmax):
-                points = np.unique(np.round(points, decimals=decimals))
-                decimals -= 1
-            return points
-
         def centers_to_edges(centers: npt.NDArray[np.float_]) -> npt.NDArray[np.float_]:
             """Obtain bin boundaries between points."""
             inner_edges = np.mean([centers[:-1], centers[1:]], axis=0)
@@ -74,9 +65,29 @@ class TrajStartDataset:
             # mypy thinks return type is Any (mypy v0.941, numpy v1.22.3)
             return cast(npt.NDArray[np.float_], edges)
 
-        centers_x: npt.NDArray[np.float_] = np.unique(self.ds.longitude.data)
-        centers_y: npt.NDArray[np.float_] = np.unique(self.ds.latitude.data)
-        centers_z: npt.NDArray[np.float_] = np.unique(self.ds.z.data)
+        def reduce_precision(
+            points: npt.NDArray[np.float_], nmax: int, decimals: int = 6
+        ) -> npt.NDArray[np.float_]:
+            """Reduce the precision and thus the number of unique points."""
+            while points.size > np.abs(nmax):
+                points = np.unique(np.round(points, decimals=decimals))
+                decimals -= 1
+            return points
+
+        def get_unique(name: str) -> npt.NDArray[np.float_]:
+            """Get unique values of a variable."""
+            orig = self.ds.variables[name].data
+            uniq: npt.NDArray[np.float_] = np.unique(orig)
+            if uniq.size < 2:
+                raise Exception(
+                    f"variable '{name}' (size {orig.size:,}) has too few unique points"
+                    f" ({uniq.size} < 2): {uniq}"
+                )
+            return uniq
+
+        centers_x: npt.NDArray[np.float_] = get_unique("longitude")
+        centers_y: npt.NDArray[np.float_] = get_unique("latitude")
+        centers_z: npt.NDArray[np.float_] = get_unique("z")
 
         if nmax is not None:
             if isinstance(nmax, int):
