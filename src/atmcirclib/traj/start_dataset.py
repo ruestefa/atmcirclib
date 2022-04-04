@@ -111,12 +111,41 @@ class TrajStartDataset:
         verbose: bool = False,  # TODO use proper logging
     ) -> TrajStartDataset:
         """Read start points from a text file."""
+
+        def find_format(path: PathLike_T) -> str:
+            """Find format of start file."""
+            with open(path, "r") as f:
+                head = [f.readline().strip() for _ in range(4)]
+            if (
+                head[0].startswith("Reference Date")
+                and head[1] == "lon lat z"
+                and head[2].startswith("----")
+                and len(head[3].split()) == 3
+            ):
+                return "cosmo"
+            elif all(len(line.split()) == 4 for line in head):
+                return "lagra"
+            else:
+                raise Exception(
+                    f"cannot determine format of start file '{path}':\n"
+                    + "\n".join(head)
+                )
+
+        format_ = find_format(path)
         if verbose:
-            print(f"read traj start points from {path}")
+            print(f"read traj start points from '{format_}' start file '{path}'")
+        if format_ == "cosmo":
+            n_header = 3
+            dtype = [("lon", "f4"), ("lat", "f4"), ("z", "f4")]
+        elif format_ == "lagra":
+            n_header = 0
+            dtype = [("_", "f4"), ("lon", "f4"), ("lat", "f4"), ("z", "f4")]
+        else:
+            raise Exception(f"unknown start point format '{format_}'")
         arr: npt.NDArray[np.float_] = np.loadtxt(
             path,
             skiprows=n_header,
-            dtype=[("lon", "f4"), ("lat", "f4"), ("z", "f4")],
+            dtype=dtype,
         )
         return cls(cls._init_dataset(arr["lon"], arr["lat"], arr["z"]))
 
