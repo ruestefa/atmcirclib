@@ -96,11 +96,11 @@ class TrajStartDataset:
             centers_y = reduce_precision(centers_y, nmax[1])
             centers_z = reduce_precision(centers_z, nmax[2])
 
-        return (
-            centers_to_edges(centers_x),
-            centers_to_edges(centers_y),
-            centers_to_edges(centers_z),
-        )
+        edges_x = centers_to_edges(centers_x)
+        edges_y = centers_to_edges(centers_y)
+        edges_z = centers_to_edges(centers_z)
+
+        return (edges_x, edges_y, edges_z)
 
     @classmethod
     def from_txt(
