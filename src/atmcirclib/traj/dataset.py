@@ -191,6 +191,10 @@ class TrajDataset:
         """Get start points."""
         return TrajStartDataset.from_trajs(self)
 
+    def copy(self) -> TrajDataset:
+        """Create a copy."""
+        return self._without_masked(mask=self.get_traj_mask())
+
     def _without_masked(self, mask: npt.NDArray[np.bool_]) -> TrajDataset:
         """Return a copy without those trajs indicated in the mask."""
         new_data_vars: dict[str, xr.DataArray] = {}
@@ -207,7 +211,7 @@ class TrajDataset:
         new_ds = xr.Dataset(
             data_vars=new_data_vars, coords=self.ds.coords, attrs=self.ds.attrs
         )
-        return type(self)(ds=new_ds, **dc.asdict(self.config))
+        return type(self)(ds=new_ds, model=self.model, **dc.asdict(self.config))
 
     @classmethod
     def from_file(

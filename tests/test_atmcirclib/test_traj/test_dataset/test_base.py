@@ -13,6 +13,8 @@ import pytest
 
 # First-party
 from atmcirclib.traj import TrajDataset
+from atmcirclib.traj import TrajDirection
+from atmcirclib.traj import TrajModel
 from atmcirclib.typing import NDIndex_T
 
 # Local
@@ -364,3 +366,50 @@ class Test_GetData:
             exp = trajs.get_data(name, replace_vnan=False, **idcs)
             ref = ref[c.idx_time, c.idx_traj]
             assert np.allclose(exp, ref)
+
+
+class Test_ModelDirection:
+    """Test trajectory model and direction attributes."""
+
+    def test_default(self) -> None:
+        """Default model."""
+        trajs = TrajDataset(create_traj_ds())
+        assert trajs.model == TrajModel.UNKNOWN
+        assert trajs.direction == TrajDirection.FW
+
+    def test_cosmo(self) -> None:
+        """COSMO model."""
+        trajs = TrajDataset(create_traj_ds(), model="cosmo")
+        assert trajs.model == TrajModel.COSMO
+        assert trajs.direction == TrajDirection.FW
+
+    def test_lagranto_fw(self) -> None:
+        """LAGRANTO model."""
+        trajs = TrajDataset(create_traj_ds(), model="lagranto")
+        assert trajs.model == TrajModel.LAGRANTO
+
+    def test_lagranto_bw(self) -> None:
+        """LAGRANTO model."""
+        ds = create_traj_ds()
+        # Invert time (Note: Some attributes SHOULD also be inverted for consistenty)
+        ds = ds.assign_coords({"time": -ds.time.data})
+        trajs = TrajDataset(ds, model="lagranto")
+        assert trajs.model == TrajModel.LAGRANTO
+        assert trajs.direction == TrajDirection.BW
+
+    def test_cosmo_bw_fail(self) -> None:
+        """COSMO model cannot be run backward."""
+        ds = create_traj_ds()
+        # Invert time (Note: Some attributes SHOULD also be inverted for consistenty)
+        ds = ds.assign_coords({"time": -ds.time.data})
+        with pytest.raises(ValueError):
+            TrajDataset(ds, model="cosmo")
+
+    def test_copy(self) -> None:
+        """Attributes are retained during copying."""
+        trajs = TrajDataset(create_traj_ds(), model="cosmo")
+        assert trajs.model == TrajModel.COSMO
+        assert trajs.direction == TrajDirection.FW
+        trajs = trajs.copy()
+        assert trajs.model == TrajModel.COSMO
+        assert trajs.direction == TrajDirection.FW
