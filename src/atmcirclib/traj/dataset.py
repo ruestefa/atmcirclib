@@ -81,16 +81,23 @@ class TrajDataset:
 
             verbose: Increase verbosity; TODO: replace by proper logging.
 
+            start_file: Path to file with start points.
+
         """
 
         nan: float = -999.0
         verbose: bool = True
+        start_file: Optional[PathLike_T] = None
 
     class MissingConfigError(Exception):
         """Missing an entry in ``Config``."""
 
     def __init__(
-        self, ds: xr.Dataset, *, model: TrajModelLike_T = None, **config_kwargs: Any
+        self,
+        ds: xr.Dataset,
+        *,
+        model: TrajModelLike_T = None,
+        **config_kwargs: Any,
     ) -> None:
         """Create a new instance."""
         self.config: TrajDataset.Config = self.Config(**config_kwargs)
@@ -99,6 +106,7 @@ class TrajDataset:
         self.direction: TrajDirection = TrajDirection.from_steps(ds.time.data)
         self.model.check_consistency(self.direction)
         self.time = TrajTimeHandler(self)
+        self._start: Optional[TrajStartDataset] = None
 
     def count(self, criteria: Optional[Criteria] = None) -> int:
         """Count all trajs that fulfill the given criteria.
@@ -187,9 +195,17 @@ class TrajDataset:
             arr[arr == self.config.nan] = np.nan
         return arr
 
-    def get_start_points(self) -> TrajStartDataset:
+    def get_start(self) -> TrajStartDataset:
         """Get start points."""
-        return TrajStartDataset.from_trajs(self)
+        if self._start is None:
+            self._start = TrajStartDataset.from_txt_or_trajs(
+                path=self.config.start_file, trajs=self, verbose=self.config.verbose
+            )
+        return self._start
+
+    def reset_start(self) -> None:
+        """Reset start points; next ``get_start()`` will re-read/-compute them."""
+        self._start = None
 
     def copy(self) -> TrajDataset:
         """Create a copy."""
@@ -211,7 +227,9 @@ class TrajDataset:
         new_ds = xr.Dataset(
             data_vars=new_data_vars, coords=self.ds.coords, attrs=self.ds.attrs
         )
-        return type(self)(ds=new_ds, model=self.model, **dc.asdict(self.config))
+        other = type(self)(ds=new_ds, model=self.model, **dc.asdict(self.config))
+        other._start = self._start
+        return other
 
     @classmethod
     def from_file(
