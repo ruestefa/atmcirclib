@@ -61,8 +61,8 @@ def create_time_handler(
     return TrajTimeHandler(TrajDataset(ds, model=model))
 
 
-class Test_GetStart:
-    """Get start datetime."""
+class Test_GetTrajsStart:
+    """Get trajectories start datetime."""
 
     def test_forward(self) -> None:
         """Forward trajs with unspecified model."""
@@ -71,7 +71,7 @@ class Test_GetStart:
             *ref, steps=np.arange(11), dtype="[m]", step_sec=60, dur_sec=600
         )
         ref_dt = dt.datetime(*ref)
-        assert th.get_start() == ref_dt
+        assert th.get_trajs_start() == ref_dt
 
     def test_forward_cosmo(self) -> None:
         """Forward trajs with COSMO, with zeroth-step-fix.
@@ -97,7 +97,7 @@ class Test_GetStart:
             model="cosmo",
         )
         ref_dt = dt.datetime(*ref) + dt.timedelta(seconds=60)
-        assert th.get_start() == ref_dt
+        assert th.get_trajs_start() == ref_dt
 
     def test_forward_lagranto(self) -> None:
         """Forward trajs with LAGRANTO.
@@ -115,7 +115,7 @@ class Test_GetStart:
             model="lagranto",
         )
         ref_dt = dt.datetime(*ref)
-        assert th.get_start() == ref_dt
+        assert th.get_trajs_start() == ref_dt
 
     def test_backward(self) -> None:
         """Backward trajs with LAGRANTO."""
@@ -129,7 +129,7 @@ class Test_GetStart:
             model="lagranto",
         )
         ref_dt = dt.datetime(*ref)
-        assert th.get_start() == ref_dt
+        assert th.get_trajs_start() == ref_dt
 
     def test_backward_cosmo_fail(self) -> None:
         """Backward trajs with COSMO, which are impossible."""

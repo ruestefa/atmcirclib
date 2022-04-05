@@ -227,8 +227,10 @@ class TrajDataset:
         new_ds = xr.Dataset(
             data_vars=new_data_vars, coords=self.ds.coords, attrs=self.ds.attrs
         )
-        other = type(self)(ds=new_ds, model=self.model, **dc.asdict(self.config))
-        other._start = self._start
+        other: TrajDataset = type(self)(
+            ds=new_ds, model=self.model, **dc.asdict(self.config)
+        )
+        other._start = self._start  # pylint: disable=W0212  # protected-access
         return other
 
     @classmethod
@@ -262,7 +264,7 @@ class TrajTimeHandler:
         """Create a new instance."""
         self.trajs: TrajDataset = trajs
 
-    def get_start(self) -> dt.datetime:
+    def get_trajs_start(self) -> dt.datetime:
         """Get the first time step in the file, optionally as a string."""
         if self.trajs.model == TrajModel.COSMO:
             # Note (2022-02-04):
@@ -297,7 +299,7 @@ class TrajTimeHandler:
             .astype("timedelta64[s]")
             .astype(dt.timedelta)
         )
-        abs_time = np.asarray((self._get_dt_ref() + rel_times)).tolist()
+        abs_time = np.asarray((self.get_simulation_start() + rel_times)).tolist()
         # mypy thinks return type is Any (mypy v0.941, numpy v1.22.3)
         return cast(list[dt.datetime], abs_time)
 
@@ -309,32 +311,40 @@ class TrajTimeHandler:
     # TODO consider turning idx_time into idcs_time, consistent with get_abs_steps
     def get_duration_since_start(self, idx_time: int) -> dt.timedelta:
         """Get the duration since start as a timedelta."""
-        abs_start: dt.datetime = self.get_start()
-        abs_target: dt.datetime = self.get_abs_steps([idx_time])[0]
-        return abs_target - abs_start
+        return self.get_duration_since(self.get_trajs_start(), idx_time)
 
     # ++++ UNTESTED ++++  # TODO remove this once everything is tested
+
+    # TODO consider turning idx_time into idcs_time, consistent with get_abs_steps
+    def get_duration_since_simulation_start(self, idx_time: int) -> dt.timedelta:
+        """Get the duration since simulation start as a timedelta."""
+        return self.get_duration_since(self.get_simulation_start(), idx_time)
+
+    # TODO consider turning idx_time into idcs_time, consistent with get_abs_steps
+    def get_duration_since(self, start: dt.datetime, idx_time: int) -> dt.timedelta:
+        """Get the duration since start as a timedelta."""
+        return self.get_abs_steps([idx_time])[0] - start
 
     # TODO Fix inconsistency that this method returns float, others dt.datetime
     def get_times_rel_start(
         self,
         idcs: Union[Sequence[int], slice] = slice(None),
-        start: Optional[dt.datetime] = None,
-        ref: Optional[dt.datetime] = None,
+        trajs_start: Optional[dt.datetime] = None,
+        simulation_start: Optional[dt.datetime] = None,
         unit: str = "s",
     ) -> list[float]:
         """Get the time steps as duration since start in the given unit."""
-        if start is None:
-            start = self.get_start()
-        if ref is None:
-            ref = self._get_dt_ref()
-        ref_rel_times = (
+        if trajs_start is None:
+            trajs_start = self.get_trajs_start()
+        if simulation_start is None:
+            simulation_start = self.get_simulation_start()
+        sim_start_rel_times = (
             # TODO move this conversion into a utility function
             self.trajs.ds.time.data[idcs]
             .astype("timedelta64[s]")
             .astype(dt.timedelta)
         )
-        start_rel_times = ref_rel_times + ref - start
+        trajs_start_rel_times = sim_start_rel_times + simulation_start - trajs_start
         # Conversion factor from seconds
         facts_by_unit = {
             "s": 1.0,
@@ -349,7 +359,18 @@ class TrajTimeHandler:
         except KeyError as e:
             units_fmtd = ", ".join(map("'{}'".format, facts_by_unit))
             raise ValueError(f"invalid unit '{unit}'; choices: {units_fmtd}") from e
-        return [dt_.total_seconds() * fact for dt_ in start_rel_times]
+        return [dt_.total_seconds() * fact for dt_ in trajs_start_rel_times]
+
+    def get_simulation_start(self) -> dt.datetime:
+        """Get simulation start as datetime ("ref_<time>" attributes)."""
+        return dt.datetime(
+            self.trajs.ds.attrs["ref_year"],
+            self.trajs.ds.attrs["ref_month"],
+            self.trajs.ds.attrs["ref_day"],
+            self.trajs.ds.attrs["ref_hour"],
+            self.trajs.ds.attrs["ref_min"],
+            self.trajs.ds.attrs["ref_sec"],
+        )
 
     def format_abs_time(
         self, idcs: Union[Sequence[int], slice] = slice(None)
@@ -360,20 +381,8 @@ class TrajTimeHandler:
 
     def format_start(self) -> str:
         """Format the first time step in the file, optionally as a string."""
-        # See comment in method _get_start
+        # See comment in method get_trajs_start
         return self.format_abs_time(idcs=[1])[0]
-
-    # TODO Consider removing 'dt' from name (inconsistent w/ other methods)
-    def _get_dt_ref(self) -> dt.datetime:
-        """Get reference datetime (start of the simulation)."""
-        return dt.datetime(
-            self.trajs.ds.attrs["ref_year"],
-            self.trajs.ds.attrs["ref_month"],
-            self.trajs.ds.attrs["ref_day"],
-            self.trajs.ds.attrs["ref_hour"],
-            self.trajs.ds.attrs["ref_min"],
-            self.trajs.ds.attrs["ref_sec"],
-        )
 
     def _get_end(self) -> dt.datetime:
         """Get the last time step in the file, optionally as a string."""
@@ -381,7 +390,7 @@ class TrajTimeHandler:
 
     def _get_duration(self) -> dt.timedelta:
         """Get the duration of the dataset."""
-        return self._get_end() - self.get_start()
+        return self._get_end() - self.get_trajs_start()
 
     def _format_duration(self) -> str:
         """Format the duration of the dataset."""
@@ -392,7 +401,7 @@ class TrajTimeHandler:
     ) -> str:
         """Format relative, by default since the start of the dataset."""
         if start is None:
-            start = self.get_start()
+            start = self.get_trajs_start()
         dur = end - start
         tot_secs = dur.total_seconds()
         hours = int(tot_secs / 3600)
