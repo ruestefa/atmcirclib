@@ -21,7 +21,7 @@ if TYPE_CHECKING:
     from .dataset import TrajDataset
 
 
-class TrajStartDataset:
+class TrajStartPointDataset:
     """Trajectories start points."""
 
     def __init__(
@@ -109,7 +109,7 @@ class TrajStartDataset:
         *,
         n_header: int = 3,
         verbose: bool = False,  # TODO use proper logging
-    ) -> TrajStartDataset:
+    ) -> TrajStartPointDataset:
         """Read start points from a text file."""
 
         def find_format(path: PathLike_T) -> str:
@@ -154,7 +154,7 @@ class TrajStartDataset:
         cls,
         trajs: TrajDataset,
         verbose: bool = False,  # TODO use proper logging
-    ) -> TrajStartDataset:
+    ) -> TrajStartPointDataset:
         """Derive start points from trajectories."""
         if verbose:
             print("derive start points from trajs")
@@ -170,7 +170,7 @@ class TrajStartDataset:
     @classmethod
     def from_txt_or_trajs(
         cls, path: Optional[PathLike_T], trajs: TrajDataset, *, verbose: bool = False
-    ) -> TrajStartDataset:
+    ) -> TrajStartPointDataset:
         """Try to read from file; if that fails, derive from trajectories."""
         if path is not None:
             try:

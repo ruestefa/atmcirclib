@@ -24,7 +24,7 @@ from atmcirclib.typing import PathLike_T
 from .criteria import Criteria
 from .criteria import Criterion
 from .lagranto import convert_traj_ds_lagranto_to_cosmo
-from .start_dataset import TrajStartDataset
+from .start_dataset import TrajStartPointDataset
 
 
 class TrajDirection(enum.Enum):
@@ -106,7 +106,7 @@ class TrajDataset:
         self.direction: TrajDirection = TrajDirection.from_steps(ds.time.data)
         self.model.check_consistency(self.direction)
         self.time = TrajTimeHandler(self)
-        self._start: Optional[TrajStartDataset] = None
+        self._start: Optional[TrajStartPointDataset] = None
 
     def count(self, criteria: Optional[Criteria] = None) -> int:
         """Count all trajs that fulfill the given criteria.
@@ -195,16 +195,16 @@ class TrajDataset:
             arr[arr == self.config.nan] = np.nan
         return arr
 
-    def get_start(self) -> TrajStartDataset:
+    def get_start_points(self) -> TrajStartPointDataset:
         """Get start points."""
         if self._start is None:
-            self._start = TrajStartDataset.from_txt_or_trajs(
+            self._start = TrajStartPointDataset.from_txt_or_trajs(
                 path=self.config.start_file, trajs=self, verbose=self.config.verbose
             )
         return self._start
 
     def reset_start(self) -> None:
-        """Reset start points; next ``get_start()`` will re-read/-compute them."""
+        """Reset start points; re-read/-compute on next ``get_start_points()``."""
         self._start = None
 
     def copy(self) -> TrajDataset:
