@@ -56,9 +56,11 @@ description_files: list[str] = [
     "HISTORY.rst",
 ]
 
+python: str = ">= 3.9"
+
 metadata: dict[str, Any] = {
     "name": "atmcirclib",
-    "version": "0.1.0",
+    "version": "0.2.0",
     "description": "Python library of Atmospheric Circulation group",
     "long_description": read_present_files(description_files),
     "author": "Stefan Ruedisuehli",
@@ -75,8 +77,6 @@ classifiers: list[str] = [
     "Programming Language :: Python :: 3.9",
 ]
 metadata["classifiers"] = classifiers
-
-python: str = ">= 3.9"
 
 # Runtime dependencies: top-level and unpinned (only critical version restrictions)
 with open("requirements.in") as f:
