@@ -193,7 +193,7 @@ class Test_GetAbsSteps:
         assert th.get_abs_steps([4, 7, 9]) == np.array(ref_steps)[[4, 7, 9]].tolist()
 
 
-class Test_GetHoursSinceStart:
+class Test_GetHoursSinceTrajsStart:
     """Get the time since start at a given step in hours."""
 
     def test_forward_full(self) -> None:
@@ -206,11 +206,11 @@ class Test_GetHoursSinceStart:
             step_sec=20 * 60,
             dur_sec=20 * 60 * 3,
         )
-        assert th.get_hours_since_start(0) == 0
-        assert th.get_hours_since_start(3) == 1
-        assert th.get_hours_since_start(6) == 2
-        assert th.get_hours_since_start(9) == 3
-        assert th.get_hours_since_start(-1) == 3
+        assert th.get_hours_since_trajs_start(0) == 0
+        assert th.get_hours_since_trajs_start(3) == 1
+        assert th.get_hours_since_trajs_start(6) == 2
+        assert th.get_hours_since_trajs_start(9) == 3
+        assert th.get_hours_since_trajs_start(-1) == 3
 
     def test_forward_fraction(self) -> None:
         """Forward trajs, targeting any steps."""
@@ -222,9 +222,9 @@ class Test_GetHoursSinceStart:
             step_sec=20 * 60,
             dur_sec=20 * 60 * 3,
         )
-        assert th.get_hours_since_start(1) == 1 / 3
-        assert th.get_hours_since_start(2) == 2 / 3
-        assert th.get_hours_since_start(-2) == 2 + 2 / 3
+        assert th.get_hours_since_trajs_start(1) == 1 / 3
+        assert th.get_hours_since_trajs_start(2) == 2 / 3
+        assert th.get_hours_since_trajs_start(-2) == 2 + 2 / 3
 
     def test_backward(self) -> None:
         """Backward trajs."""
@@ -236,8 +236,8 @@ class Test_GetHoursSinceStart:
             step_sec=20 * 60,
             dur_sec=20 * 60 * 3,
         )
-        assert th.get_hours_since_start(0) == -0
-        assert th.get_hours_since_start(3) == -1
-        assert th.get_hours_since_start(6) == -2
-        assert th.get_hours_since_start(9) == -3
-        assert th.get_hours_since_start(-1) == -3
+        assert th.get_hours_since_trajs_start(0) == -0
+        assert th.get_hours_since_trajs_start(3) == -1
+        assert th.get_hours_since_trajs_start(6) == -2
+        assert th.get_hours_since_trajs_start(9) == -3
+        assert th.get_hours_since_trajs_start(-1) == -3

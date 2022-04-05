@@ -304,12 +304,12 @@ class TrajTimeHandler:
         return cast(list[dt.datetime], abs_time)
 
     # TODO consider turning idx_time into idcs_time, consistent with get_abs_steps
-    def get_hours_since_start(self, idx_time: int) -> float:
+    def get_hours_since_trajs_start(self, idx_time: int) -> float:
         """Get the time since start at a given step in (fractional) hours."""
-        return self.get_duration_since_start(idx_time).total_seconds() / 3600
+        return self.get_duration_since_trajs_start(idx_time).total_seconds() / 3600
 
     # TODO consider turning idx_time into idcs_time, consistent with get_abs_steps
-    def get_duration_since_start(self, idx_time: int) -> dt.timedelta:
+    def get_duration_since_trajs_start(self, idx_time: int) -> dt.timedelta:
         """Get the duration since start as a timedelta."""
         return self.get_duration_since(self.get_trajs_start(), idx_time)
 
