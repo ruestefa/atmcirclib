@@ -294,10 +294,7 @@ class TrajTimeHandler:
             # Should be caught by mypy, but double-checking cannot hurt
             raise TypeError(f"wrap individual indices in list: [{idcs}]")
         rel_times = (
-            # TODO move this convertion into a utility function
-            self.trajs.ds.time.data[idcs]
-            .astype("timedelta64[s]")
-            .astype(dt.timedelta)
+            self.trajs.ds.time.data[idcs].astype("timedelta64[s]").astype(dt.timedelta)
         )
         abs_time = np.asarray((self.get_simulation_start() + rel_times)).tolist()
         # mypy thinks return type is Any (mypy v0.941, numpy v1.22.3)
