@@ -16,3 +16,4 @@
 __pycache__/
 .tox/
 /data
+_skbuild/
