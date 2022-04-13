@@ -1,5 +1,6 @@
 anaconda-client
 black
+cmake
 conda-build
 flake8
 ipdb
@@ -7,9 +8,11 @@ ipython
 isort
 mccabe
 mypy>=0.941
+ninja
 pre-commit
 pylint
 pytest
-tox>=3.0.0
+scikit-build
 tox-conda
+tox>=3.0.0
 types-setuptools
