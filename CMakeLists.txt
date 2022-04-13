@@ -89,81 +89,81 @@ find_package(F2PY REQUIRED) # for ${F2PY_INCLUDE_DIR}
 #-------------------------------------------------------------------------------
 
 set(
-    f_src_files_rel
+    relpaths_mod_f
     "src/atmcirclib/deriv/ext/f77/_deriv_f77.f"
     "src/atmcirclib/deriv/ext/f90/_deriv_f90.f90"
 )
 
-foreach(f_src_file_rel ${f_src_files_rel})
-    set(f_src_file_abs "${CMAKE_SOURCE_DIR}/${f_src_file_rel}")
-    get_filename_component(f2py_mod_name ${f_src_file_rel} NAME_WLE)
-    get_filename_component(f_src_dir ${f_src_file_rel} DIRECTORY)
-    set(f2py_mod_dir "${f_src_dir}/${f2py_mod_name}")
-    set(f2py_cmod_file "${f2py_mod_dir}/${f2py_mod_name}module.c")
-    set(ext_mod_file "${f2py_mod_name}${PYTHON_EXTENSION_MODULE_SUFFIX}")
+foreach(relpath_mod_f ${relpaths_mod_f})
+    get_filename_component(mod ${relpath_mod_f} NAME_WLE)
+    set(abspath_mod_f "${CMAKE_SOURCE_DIR}/${relpath_mod_f}")
+    get_filename_component(src_dir ${relpath_mod_f} DIRECTORY)
+    set(relpath_build "${src_dir}/${mod}")
+    set(relpath_mod_c "${relpath_build}/${mod}module.c")
+    set(mod_so "${mod}${PYTHON_EXTENSION_MODULE_SUFFIX}")
 
     message("-- Extension module:")
-    message("   f_src_file_rel = ${f_src_file_rel}")
-    message("   f_src_file_abs = ${f_src_file_abs}")
-    message("   f_src_dir      = ${f_src_dir}")
-    message("   f2py_mod_name  = ${f2py_mod_name}")
-    message("   f2py_mod_dir   = ${f2py_mod_dir}")
-    message("   f2py_cmod_file = ${f2py_cmod_file}")
-    message("   ext_mod_file   = ${ext_mod_file}")
+    message("   relpath_mod_f  = ${relpath_mod_f}")
+    message("   abspath_mod_f  = ${abspath_mod_f}")
+    message("   mod            = ${mod}")
+    message("   src_dir        = ${src_dir}")
+    message("   relpath_build  = ${relpath_build}")
+    message("   relpath_mod_c  = ${relpath_mod_c}")
+    message("   mod_so         = ${mod_so}")
     message("--")
 
     # Target for enforcing dependencies
-    add_custom_target(${f2py_mod_name} ALL DEPENDS "${f_src_file_abs}")
+    add_custom_target(${mod} ALL DEPENDS "${abspath_mod_f}")
 
     # Custom command for generating .c
     add_custom_command(
-        OUTPUT "${f2py_cmod_file}"
+        OUTPUT "${relpath_mod_c}"
         COMMAND ${F2PY_EXECUTABLE}
-            -m ${f2py_mod_name}
-            ${f_src_file_abs}
-            --build-dir ${f2py_mod_dir}
+            -m ${mod}
+            ${abspath_mod_f}
+            --build-dir ${relpath_build}
             --lower
         WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}
-        DEPENDS ${f_src_file_abs}
+        DEPENDS ${abspath_mod_f}
     )
 
     add_library(
-        ${ext_mod_file} MODULE
-        "${f2py_cmod_file}"
+        ${mod_so} MODULE
+        "${relpath_mod_c}"
         "${F2PY_INCLUDE_DIR}/fortranobject.c"
-        "${f_src_file_abs}"
+        "${abspath_mod_f}"
     )
     set_target_properties(
-        ${ext_mod_file} PROPERTIES LIBRARY_OUTPUT_DIRECTORY "${f2py_mod_dir}"
+        ${mod_so} PROPERTIES LIBRARY_OUTPUT_DIRECTORY "${relpath_build}"
     )
 
     target_include_directories(
-        ${ext_mod_file} PUBLIC
+        ${mod_so} PUBLIC
         ${F2PY_INCLUDE_DIRS}
         ${PYTHON_INCLUDE_DIRS}
     )
-    set_target_properties(${ext_mod_file} PROPERTIES SUFFIX "")
-    set_target_properties(${ext_mod_file} PROPERTIES PREFIX "")
+    set_target_properties(${mod_so} PROPERTIES SUFFIX "")
+    set_target_properties(${mod_so} PROPERTIES PREFIX "")
 
     # Linker fixes
     if (UNIX)
         if (APPLE)
             set_target_properties(
-                ${ext_mod_file} PROPERTIES
+                ${mod_so} PROPERTIES
                 LINK_FLAGS "-Wl,-dylib,-undefined,dynamic_lookup"
             )
         else()
             set_target_properties(
-                ${ext_mod_file} PROPERTIES
+                ${mod_so} PROPERTIES
                 LINK_FLAGS "-Wl,--allow-shlib-undefined"
             )
         endif()
     endif()
 
     if (SKBUILD)
-        install(TARGETS ${ext_mod_file} DESTINATION ${f_src_dir})
+        install(TARGETS ${mod_so} DESTINATION ${src_dir})
     else()
-        install(TARGETS ${ext_mod_file} DESTINATION ${CMAKE_SOURCE_DIR}/${f_src_dir})
+        install(TARGETS ${mod_so} DESTINATION ${CMAKE_SOURCE_DIR}/${src_dir})
     endif()
 
 endforeach()
