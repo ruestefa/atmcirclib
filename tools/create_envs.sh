@@ -1,6 +1,11 @@
 #!/bin/bash
 # Create run and dev conda environments and export them.
 
+if [[ "${CONDA_PREFIX}" != "" ]]; then
+    echo "please deactivate conda env and retry (detected '${CONDA_PREFIX}')" >&2
+    return 1
+fi
+
 get_repo_name()
 {
     python -c 'from pathlib import Path; from git import Repo; print(Path(Repo(".", search_parent_directories=True).working_tree_dir).name)' || return 1
@@ -44,11 +49,6 @@ create_env()
     local reqs_files=("${@}")
     local reqs_file_flags=()
     local reqs_file
-
-    if [[ "${CONDA_PREFIX}" != "" ]]; then
-        echo "please deactivate conda env and retry (detected '${CONDA_PREFIX}')" >&2
-        return 1
-    fi
     if $(eval ${CONDA} info --env | \grep -q "^\<${env_name}\>"); then
         echo "remove conda env '${env_name}'"
         cmd=(${CONDA} env remove -n "${env_name}")
