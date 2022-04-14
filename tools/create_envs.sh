@@ -3,8 +3,10 @@
 
 if [[ "${CONDA_PREFIX}" != "" ]]; then
     echo "please deactivate conda env and retry (detected '${CONDA_PREFIX}')" >&2
-    return 1
+    exit 1
 fi
+
+python -c 'import git' || { echo "Python module 'git' must be installed" >&2; exit 1; }
 
 get_repo_name()
 {
