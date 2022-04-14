@@ -1,5 +1,10 @@
 # Atmcirclib: Changelog
 
+## v0.2.1 (2022-04-14)
+
+- Switch build from (pure) `setuptools` to `scikit-build`
+- Add Fortran extension modules as `atmcirclib.deriv.ext` (`deriv-f`, `deriv.f90`)
+
 ## v0.2.0 (2022-04-05)
 
 - Implement `CriteriaFormatter` with string formatting of `*Criterion` and `Criteria` instances for titles ("human") and file names ("file"), with tests
