@@ -1,4 +1,6 @@
 [flake8]
+exclude =
+    .*/
 max-line-length = 88
 max-complexity = 10
 ignore =
