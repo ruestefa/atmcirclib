@@ -90,8 +90,8 @@ find_package(F2PY REQUIRED) # for ${F2PY_INCLUDE_DIR}
 
 set(
     rpaths_mod_f
-    "src/atmcirclib/deriv/ext/f77/_deriv_f77.f"
-    "src/atmcirclib/deriv/ext/f90/_deriv_f90.f90"
+    "src/atmcirclib/deriv/ext/f77/_deriv.f"
+    "src/atmcirclib/deriv/ext/f90/_deriv.f90"
 )
 
 foreach(rpath_mod_f ${rpaths_mod_f})
