@@ -21,7 +21,7 @@ requirements:
     - pip
     - cmake
     - ninja
-    - numpy
+    - numpy>=1.22.3
     - scikit-build
     - setuptools>=35.0.2
     - wheel
