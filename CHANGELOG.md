@@ -1,5 +1,11 @@
 # Atmcirclib: Changelog
 
+## v0.2.2 (2022-04-14)
+
+- Add module `intp` (from repo `dpv_th`) with tests
+- Add explorative `gt4py` tests (from repo `dpv_th`)
+- Improve scripts to create recipe (now moved into atmcirclib) and environments
+
 ## v0.2.1 (2022-04-14)
 
 - Switch build from (pure) `setuptools` to `scikit-build`
