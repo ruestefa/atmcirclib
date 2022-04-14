@@ -1,6 +1,6 @@
-cartopy>=0.20.0
-click>=8.0.0
 gt4py==2022.04.09
-netcdf4>=1.5.8
-numpy>=1.20.0
-xarray>=2022.1.0
+cartopy>=0.20
+click>=8.0
+netcdf4>=1.5
+numpy>=1.22
+xarray>=2022.3

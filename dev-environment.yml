@@ -2,7 +2,6 @@ name: atmcirclib-dev
 channels:
   - atmcirc
   - conda-forge
-  - defaults
 dependencies:
   - _libgcc_mutex=0.1
   - _openmp_mutex=4.5
@@ -65,7 +64,7 @@ dependencies:
   - idna=3.3
   - importlib-metadata=4.11.3
   - importlib_metadata=4.11.3
-  - importlib_resources=5.6.0
+  - importlib_resources=5.7.0
   - iniconfig=1.1.1
   - ipdb=0.13.9
   - ipython=8.2.0
