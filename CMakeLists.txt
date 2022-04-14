@@ -88,23 +88,17 @@ find_package(F2PY REQUIRED) # for ${F2PY_INCLUDE_DIR}
 # Build Fortran extension modules
 #-------------------------------------------------------------------------------
 
-set(
-    rpaths_mod_f
-    "src/atmcirclib/deriv/ext/f77/_deriv.f"
-    "src/atmcirclib/deriv/ext/f90/_deriv.f90"
-)
-
-foreach(rpath_mod_f ${rpaths_mod_f})
+macro(f2py rpath_mod_f)
     set(apath_mod_f "${CMAKE_SOURCE_DIR}/${rpath_mod_f}")
     get_filename_component(mod "${rpath_mod_f}" NAME_WLE)
     get_filename_component(rpath "${rpath_mod_f}" DIRECTORY)
-    string(REGEX REPLACE "/" "__" pre "${rpath}")
-    set(pre_mod "${pre}${mod}")
+    string(REGEX REPLACE "/" "__" _pre "${rpath}")
+    set(_pre_mod "${_pre}${mod}")
     set(mod_c "${mod}module.c")
-    set(pre_mod_c "${pre_mod}module.c")
-    set(rpath_pre_mod_c "${rpath}/${pre_mod_c}")
+    set(_pre_mod_c "${_pre_mod}module.c")
+    set(rpath_pre_mod_c "${rpath}/${_pre_mod_c}")
     set(mod_so "${mod}${PYTHON_EXTENSION_MODULE_SUFFIX}")
-    set(pre_mod_so "${pre}${mod_so}")
+    set(pre_mod_so "${_pre}${mod_so}")
     set(rpath_pre_mod_so "${rpath}/${pre_mod_so}")
 
     message("-- Extension module:")
@@ -112,54 +106,51 @@ foreach(rpath_mod_f ${rpaths_mod_f})
     message("   apath_mod_f      = ${apath_mod_f}")
     message("   mod              = ${mod}")
     message("   rpath            = ${rpath}")
-    message("   pre              = ${pre}")
-    message("   pre_mod          = ${pre_mod}")
+    message("   _pre             = ${_pre}")
+    message("   _pre_mod         = ${_pre_mod}")
     message("   mod_c            = ${mod_c}")
-    message("   pre_mod_c        = ${pre_mod_c}")
+    message("   _pre_mod_c       = ${_pre_mod_c}")
     message("   rpath_pre_mod_c  = ${rpath_pre_mod_c}")
     message("   mod_so           = ${mod_so}")
     message("   pre_mod_so       = ${pre_mod_so}")
     message("   rpath_pre_mod_so = ${rpath_pre_mod_so}")
     message("--")
 
-    # Custom command for generating .c
+    # Use `f2py` to create `prefix_modmodule.c` from `mod.f90`
     add_custom_command(
         OUTPUT "${rpath_pre_mod_c}"
-        COMMAND ${F2PY_EXECUTABLE}
-            -m "${mod}"
-            "${apath_mod_f}"
-            --build-dir "${rpath}"
-            --lower
-            && mv -v "${rpath}/${mod_c}" "${rpath_pre_mod_c}"
+        COMMAND ${F2PY_EXECUTABLE} -m "${mod}" "${apath_mod_f}" --build-dir "${rpath}" --lower
+        COMMAND mv -v "${rpath}/${mod_c}" "${rpath_pre_mod_c}"
         WORKING_DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}"
         DEPENDS "${apath_mod_f}"
     )
 
+    # Create `pefix_mod.cpython-39.x86_64-linux-gnu.so` from `prefix_modmodule.c` and `mod.f90`
     add_library(
         "${pre_mod_so}" MODULE
         "${rpath_pre_mod_c}"
         "${F2PY_INCLUDE_DIR}/fortranobject.c"
         "${apath_mod_f}"
     )
-    set_target_properties("${pre_mod_so}" PROPERTIES LIBRARY_OUTPUT_DIRECTORY "${rpath}")
-
+    set_target_properties(
+        "${pre_mod_so}" PROPERTIES
+        LIBRARY_OUTPUT_DIRECTORY "${rpath}"
+        PREFIX ""
+        SUFFIX ""
+    )
     target_include_directories("${pre_mod_so}" PUBLIC ${F2PY_INCLUDE_DIRS} ${PYTHON_INCLUDE_DIRS})
-    set_target_properties("${pre_mod_so}" PROPERTIES SUFFIX "")
-    set_target_properties("${pre_mod_so}" PROPERTIES PREFIX "")
 
-    # Linker fixes
+    # Set platform-specific linker flags
     if (UNIX)
         if (APPLE)
-            set_target_properties(
-                "${pre_mod_so}" PROPERTIES LINK_FLAGS "-Wl,-dylib,-undefined,dynamic_lookup"
-            )
+            set(mod_so_link_flags "-Wl,-dylib,-undefined,dynamic_lookup")
         else()
-            set_target_properties(
-                "${pre_mod_so}" PROPERTIES LINK_FLAGS "-Wl,--allow-shlib-undefined"
-            )
+            set(mod_so_link_flags "-Wl,--allow-shlib-undefined")
         endif()
+        set_target_properties("${pre_mod_so}" PROPERTIES LINK_FLAGS "${mod_so_link_flags}")
     endif()
 
+    # Install `pefix_mod.cpython-39.x86_64-linux-gnu.so` as `mod.cpython-...-gnu.so` in source tree
     if (SKBUILD)
         set(install_dir_mod_so "${rpath}")
     else()
@@ -170,8 +161,10 @@ foreach(rpath_mod_f ${rpaths_mod_f})
         DESTINATION "${install_dir_mod_so}"
         RENAME "${mod_so}"
     )
+endmacro()
 
-endforeach()
+f2py("src/atmcirclib/deriv/ext/f77/_deriv.f")
+f2py("src/atmcirclib/deriv/ext/f90/_deriv.f90")
 
 #-------------------------------------------------------------------------------
 # Done
