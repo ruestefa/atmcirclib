@@ -163,8 +163,8 @@ macro(f2py rpath_mod_f)
     )
 endmacro()
 
-f2py("src/atmcirclib/deriv/ext/f77/_deriv.f")
-f2py("src/atmcirclib/deriv/ext/f90/_deriv.f90")
+f2py("src/atmcirclib/deriv/ext/_f77/deriv.f")
+f2py("src/atmcirclib/deriv/ext/_f90/deriv.f90")
 
 #-------------------------------------------------------------------------------
 # Done
