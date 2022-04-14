@@ -250,7 +250,7 @@ def cli(ctx: click.Context, **kwargs: Any) -> None:
 
 
 def main(outfile: str) -> None:
-    """Main program."""
+    """Run the program."""
     setup_py = SetupPyFile()
     yaml = MetaYamlFile(
         metadata=Metadata(**setup_py.get_metadata()),
