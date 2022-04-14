@@ -36,18 +36,20 @@ class SetupPyFile:
     """File ``setup.py``."""
 
     path: PathLike_T = "setup.py"
+    attr_name_metadata = "metadata"
+    attr_name_requirements = "install_requires"
 
     def __post_init__(self) -> None:
         """Finish initialization."""
         self._mod: ModuleType = self._import_partial()
 
     def get_metadata(self) -> dict[str, Any]:
-        """Get module attribute ``metadata``."""
-        return dict(getattr(self._mod, "metadata"))
+        """Get metadata."""
+        return dict(getattr(self._mod, self.attr_name_metadata))
 
     def get_requirements(self) -> list[str]:
-        """Get module attribute ``requirements``."""
-        return list(getattr(self._mod, "requirements"))
+        """Get requirements."""
+        return list(getattr(self._mod, self.attr_name_requirements))
 
     def _import_partial(self) -> ModuleType:
         """Import partial ``setup.py`` file (w/o ``setup(...)``) as module."""
