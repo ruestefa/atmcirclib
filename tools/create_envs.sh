@@ -1,9 +1,15 @@
 #!/bin/bash
 # Create run and dev conda environments and export them.
 
+get_repo_name()
+{
+    python -c 'from pathlib import Path; from git import Repo; print(Path(Repo(".", search_parent_directories=True).working_tree_dir).name)' || return 1
+}
+
 PYTHON_VERSION=3.9
-run_env_name="atmcirclib"
-dev_env_name="atmcirclib-dev"
+repo_name=$(get_repo_name) || { echo "could not determine repo name" >&2; exit 1; }
+run_env_name="${repo_name}"
+dev_env_name="${repo_name}-dev"
 run_reqs_file="requirements.in"
 dev_reqs_file="dev-requirements.in"
 run_env_file="environment.yml"
