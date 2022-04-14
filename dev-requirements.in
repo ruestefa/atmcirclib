@@ -15,4 +15,6 @@ pytest
 scikit-build
 tox-conda
 tox>=3.0.0
+toml
 types-setuptools
+types-toml

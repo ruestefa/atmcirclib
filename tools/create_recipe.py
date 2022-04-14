@@ -12,6 +12,7 @@ import os
 import pprint as pp
 import sys
 import typing
+from collections.abc import Sequence
 from pathlib import Path
 from textwrap import dedent
 from types import ModuleType
@@ -22,6 +23,7 @@ from typing import Union
 
 # Third-party
 import click
+import toml
 
 if typing.TYPE_CHECKING:
     # Standard library
@@ -83,6 +85,23 @@ class SetupPyFile:
 
 
 @dc.dataclass
+class PyprojectTomlFile:
+    """File ``pyproject.toml``."""
+
+    path: PathLike_T = "pyproject.toml"
+
+    def get_build_requirements(self) -> list[str]:
+        """Obtain build requirements from entry ``build-systems/requires``."""
+        content = toml.load(str(self.path))
+        raw_deps: list[str]
+        try:
+            raw_deps = content["build-system"]["requires"]
+        except KeyError:
+            raw_deps = []
+        return [dep.split(";")[0].replace(" ", "") for dep in raw_deps]
+
+
+@dc.dataclass
 class Metadata:
     """Package metadata."""
 
@@ -126,6 +145,7 @@ class MetaYamlFile:
     metadata: Metadata
     requirements: list[str]
     indent: int = 2
+    build_requirements: list[str] = dc.field(default_factory=list)
 
     def format(self) -> str:
         """Return file content as string."""
@@ -151,6 +171,7 @@ class MetaYamlFile:
         {ind}host:
         {ind}{ind}- python
         {ind}{ind}- pip
+        {build_requirements_fmtd}
         {ind}run:
         {requirements_fmtd}
 
@@ -166,12 +187,19 @@ class MetaYamlFile:
         """
         return dedent(s).format(
             ind=" " * self.indent,
+            build_requirements_fmtd=self._format_requirements(self.build_requirements),
             requirements_fmtd=self._format_requirements(),
             long_description_fmtd=self._indent(self.metadata.long_description, 2),
             **dc.asdict(self.metadata),
         )
 
-    def write(self, path: Optional[PathLike_T] = None, *, _indent: int = 0) -> None:
+    def write(
+        self,
+        path: Optional[PathLike_T] = None,
+        *,
+        verbose: bool = False,
+        _indent: int = 0,
+    ) -> None:
         """Write file to disk."""
         content = self.format()
         if _indent:
@@ -181,17 +209,27 @@ class MetaYamlFile:
         if path is None or path == "-":
             sys.stdout.write(content)
         else:
+            path = Path(self._format_path(path))
+            path.parent.mkdir(parents=True, exist_ok=True)
+            if verbose:
+                print(f"write {path}")
             with open(path, "w") as f:
                 f.write(content)
 
-    def _format_requirements(self) -> str:
+    def _format_requirements(self, requirements: Optional[Sequence[str]] = None) -> str:
         """Format requirements."""
-        return self._indent("- " + "\n- ".join(self.requirements), 2)
+        if requirements is None:
+            requirements = self.requirements
+        return self._indent("- " + "\n- ".join(requirements), 2)
 
     def _indent(self, s: str, n: int = 1) -> str:
         """Indent all lines of ``s`` by ``n * self.indent``."""
         ind = " " * self.indent * n
         return f"{ind}" + f"\n{ind}".join(s.split("\n"))
+
+    def _format_path(self, path: PathLike_T) -> str:
+        """Format the output file path."""
+        return str(path).format(version=self.metadata.version)
 
 
 @click.group(invoke_without_command=True)
@@ -199,8 +237,11 @@ class MetaYamlFile:
 @click.option(
     "-o",
     "--outfile",
-    help="Outfile file path; pass - to write to standard output.",
-    default="recipe/meta.yaml",
+    help=(
+        "Outfile file path; pass - to write to standard output; use format key"
+        " '{version}' to insert the project version."
+    ),
+    default="recipe/v{version}/meta.yaml",
 )
 def cli(ctx: click.Context, **kwargs: Any) -> None:
     """Command line interface."""
@@ -213,9 +254,10 @@ def main(outfile: str) -> None:
     setup_py = SetupPyFile()
     yaml = MetaYamlFile(
         metadata=Metadata(**setup_py.get_metadata()),
+        build_requirements=PyprojectTomlFile().get_build_requirements(),
         requirements=setup_py.get_requirements(),
     )
-    yaml.write(outfile)
+    yaml.write(outfile, verbose=True)
 
 
 @cli.command("test")

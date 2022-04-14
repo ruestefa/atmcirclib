@@ -19,6 +19,12 @@ requirements:
   host:
     - python
     - pip
+    - cmake
+    - ninja
+    - numpy
+    - scikit-build
+    - setuptools>=35.0.2
+    - wheel
   run:
     - cartopy>=0.20.0
     - click>=8.0.0

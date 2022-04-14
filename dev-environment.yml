@@ -203,6 +203,7 @@ dependencies:
   - traitlets=5.1.1
   - typed-ast=1.5.2
   - types-setuptools=57.4.12
+  - types-toml=0.10.4
   - typing-extensions=4.1.1
   - typing_extensions=4.1.1
   - typing_inspect=0.7.1
