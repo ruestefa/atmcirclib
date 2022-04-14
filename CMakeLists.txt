@@ -89,77 +89,87 @@ find_package(F2PY REQUIRED) # for ${F2PY_INCLUDE_DIR}
 #-------------------------------------------------------------------------------
 
 set(
-    relpaths_mod_f
+    rpaths_mod_f
     "src/atmcirclib/deriv/ext/f77/_deriv_f77.f"
     "src/atmcirclib/deriv/ext/f90/_deriv_f90.f90"
 )
 
-foreach(relpath_mod_f ${relpaths_mod_f})
-    get_filename_component(mod "${relpath_mod_f}" NAME_WLE)
-    set(abspath_mod_f "${CMAKE_SOURCE_DIR}/${relpath_mod_f}")
-    get_filename_component(src_dir "${relpath_mod_f}" DIRECTORY)
-    set(relpath "${src_dir}/${mod}")
+foreach(rpath_mod_f ${rpaths_mod_f})
+    set(apath_mod_f "${CMAKE_SOURCE_DIR}/${rpath_mod_f}")
+    get_filename_component(mod "${rpath_mod_f}" NAME_WLE)
+    get_filename_component(rpath "${rpath_mod_f}" DIRECTORY)
+    string(REGEX REPLACE "/" "__" pre "${rpath}")
+    set(pre_mod "${pre}${mod}")
     set(mod_c "${mod}module.c")
-    set(relpath_mod_c "${relpath}/${mod_c}")
+    set(pre_mod_c "${pre_mod}module.c")
+    set(rpath_pre_mod_c "${rpath}/${pre_mod_c}")
     set(mod_so "${mod}${PYTHON_EXTENSION_MODULE_SUFFIX}")
+    set(pre_mod_so "${pre}${mod_so}")
+    set(rpath_pre_mod_so "${rpath}/${pre_mod_so}")
 
     message("-- Extension module:")
-    message("   relpath_mod_f  = ${relpath_mod_f}")
-    message("   abspath_mod_f  = ${abspath_mod_f}")
-    message("   mod            = ${mod}")
-    message("   src_dir        = ${src_dir}")
-    message("   relpath        = ${relpath}")
-    message("   mod_c          = ${mod_c}")
-    message("   relpath_mod_c  = ${relpath_mod_c}")
-    message("   mod_so         = ${mod_so}")
+    message("   rpath_mod_f      = ${rpath_mod_f}")
+    message("   apath_mod_f      = ${apath_mod_f}")
+    message("   mod              = ${mod}")
+    message("   rpath            = ${rpath}")
+    message("   pre              = ${pre}")
+    message("   pre_mod          = ${pre_mod}")
+    message("   mod_c            = ${mod_c}")
+    message("   pre_mod_c        = ${pre_mod_c}")
+    message("   rpath_pre_mod_c  = ${rpath_pre_mod_c}")
+    message("   mod_so           = ${mod_so}")
+    message("   pre_mod_so       = ${pre_mod_so}")
+    message("   rpath_pre_mod_so = ${rpath_pre_mod_so}")
     message("--")
-
-    # Target for enforcing dependencies
-    add_custom_target("${mod}" ALL DEPENDS "${abspath_mod_f}")
 
     # Custom command for generating .c
     add_custom_command(
-        OUTPUT "${relpath_mod_c}"
+        OUTPUT "${rpath_pre_mod_c}"
         COMMAND ${F2PY_EXECUTABLE}
             -m "${mod}"
-            "${abspath_mod_f}"
-            --build-dir "${relpath}"
+            "${apath_mod_f}"
+            --build-dir "${rpath}"
             --lower
+            && mv -v "${rpath}/${mod_c}" "${rpath_pre_mod_c}"
         WORKING_DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}"
-        DEPENDS "${abspath_mod_f}"
+        DEPENDS "${apath_mod_f}"
     )
 
     add_library(
-        "${mod_so}" MODULE
-        "${relpath_mod_c}"
+        "${pre_mod_so}" MODULE
+        "${rpath_pre_mod_c}"
         "${F2PY_INCLUDE_DIR}/fortranobject.c"
-        "${abspath_mod_f}"
+        "${apath_mod_f}"
     )
-    set_target_properties("${mod_so}" PROPERTIES LIBRARY_OUTPUT_DIRECTORY "${relpath}")
+    set_target_properties("${pre_mod_so}" PROPERTIES LIBRARY_OUTPUT_DIRECTORY "${rpath}")
 
-    target_include_directories("${mod_so}" PUBLIC ${F2PY_INCLUDE_DIRS} ${PYTHON_INCLUDE_DIRS})
-    set_target_properties("${mod_so}" PROPERTIES SUFFIX "")
-    set_target_properties("${mod_so}" PROPERTIES PREFIX "")
+    target_include_directories("${pre_mod_so}" PUBLIC ${F2PY_INCLUDE_DIRS} ${PYTHON_INCLUDE_DIRS})
+    set_target_properties("${pre_mod_so}" PROPERTIES SUFFIX "")
+    set_target_properties("${pre_mod_so}" PROPERTIES PREFIX "")
 
     # Linker fixes
     if (UNIX)
         if (APPLE)
             set_target_properties(
-                "${mod_so}" PROPERTIES LINK_FLAGS "-Wl,-dylib,-undefined,dynamic_lookup"
+                "${pre_mod_so}" PROPERTIES LINK_FLAGS "-Wl,-dylib,-undefined,dynamic_lookup"
             )
         else()
             set_target_properties(
-                "${mod_so}" PROPERTIES LINK_FLAGS "-Wl,--allow-shlib-undefined"
+                "${pre_mod_so}" PROPERTIES LINK_FLAGS "-Wl,--allow-shlib-undefined"
             )
         endif()
     endif()
 
     if (SKBUILD)
-        set(install_dir_mod_so "${src_dir}")
+        set(install_dir_mod_so "${rpath}")
     else()
-        set(install_dir_mod_so "${CMAKE_SOURCE_DIR}/${src_dir}")
+        set(install_dir_mod_so "${CMAKE_SOURCE_DIR}/${rpath}")
     endif()
-    install(TARGETS "${mod_so}" DESTINATION "${install_dir_mod_so}")
+    install(
+        FILES "${CMAKE_CURRENT_BINARY_DIR}/${rpath_pre_mod_so}"
+        DESTINATION "${install_dir_mod_so}"
+        RENAME "${mod_so}"
+    )
 
 endforeach()
 
