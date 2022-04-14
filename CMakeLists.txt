@@ -27,7 +27,7 @@ message("--")
 #-------------------------------------------------------------------------------
 
 project(
-    atmcirclib
+    "atmcirclib"
     LANGUAGES C Fortran
 )
 
@@ -95,11 +95,12 @@ set(
 )
 
 foreach(relpath_mod_f ${relpaths_mod_f})
-    get_filename_component(mod ${relpath_mod_f} NAME_WLE)
+    get_filename_component(mod "${relpath_mod_f}" NAME_WLE)
     set(abspath_mod_f "${CMAKE_SOURCE_DIR}/${relpath_mod_f}")
-    get_filename_component(src_dir ${relpath_mod_f} DIRECTORY)
-    set(relpath_build "${src_dir}/${mod}")
-    set(relpath_mod_c "${relpath_build}/${mod}module.c")
+    get_filename_component(src_dir "${relpath_mod_f}" DIRECTORY)
+    set(relpath "${src_dir}/${mod}")
+    set(mod_c "${mod}module.c")
+    set(relpath_mod_c "${relpath}/${mod_c}")
     set(mod_so "${mod}${PYTHON_EXTENSION_MODULE_SUFFIX}")
 
     message("-- Extension module:")
@@ -107,64 +108,58 @@ foreach(relpath_mod_f ${relpaths_mod_f})
     message("   abspath_mod_f  = ${abspath_mod_f}")
     message("   mod            = ${mod}")
     message("   src_dir        = ${src_dir}")
-    message("   relpath_build  = ${relpath_build}")
+    message("   relpath        = ${relpath}")
+    message("   mod_c          = ${mod_c}")
     message("   relpath_mod_c  = ${relpath_mod_c}")
     message("   mod_so         = ${mod_so}")
     message("--")
 
     # Target for enforcing dependencies
-    add_custom_target(${mod} ALL DEPENDS "${abspath_mod_f}")
+    add_custom_target("${mod}" ALL DEPENDS "${abspath_mod_f}")
 
     # Custom command for generating .c
     add_custom_command(
         OUTPUT "${relpath_mod_c}"
         COMMAND ${F2PY_EXECUTABLE}
-            -m ${mod}
-            ${abspath_mod_f}
-            --build-dir ${relpath_build}
+            -m "${mod}"
+            "${abspath_mod_f}"
+            --build-dir "${relpath}"
             --lower
-        WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}
-        DEPENDS ${abspath_mod_f}
+        WORKING_DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}"
+        DEPENDS "${abspath_mod_f}"
     )
 
     add_library(
-        ${mod_so} MODULE
+        "${mod_so}" MODULE
         "${relpath_mod_c}"
         "${F2PY_INCLUDE_DIR}/fortranobject.c"
         "${abspath_mod_f}"
     )
-    set_target_properties(
-        ${mod_so} PROPERTIES LIBRARY_OUTPUT_DIRECTORY "${relpath_build}"
-    )
+    set_target_properties("${mod_so}" PROPERTIES LIBRARY_OUTPUT_DIRECTORY "${relpath}")
 
-    target_include_directories(
-        ${mod_so} PUBLIC
-        ${F2PY_INCLUDE_DIRS}
-        ${PYTHON_INCLUDE_DIRS}
-    )
-    set_target_properties(${mod_so} PROPERTIES SUFFIX "")
-    set_target_properties(${mod_so} PROPERTIES PREFIX "")
+    target_include_directories("${mod_so}" PUBLIC ${F2PY_INCLUDE_DIRS} ${PYTHON_INCLUDE_DIRS})
+    set_target_properties("${mod_so}" PROPERTIES SUFFIX "")
+    set_target_properties("${mod_so}" PROPERTIES PREFIX "")
 
     # Linker fixes
     if (UNIX)
         if (APPLE)
             set_target_properties(
-                ${mod_so} PROPERTIES
-                LINK_FLAGS "-Wl,-dylib,-undefined,dynamic_lookup"
+                "${mod_so}" PROPERTIES LINK_FLAGS "-Wl,-dylib,-undefined,dynamic_lookup"
             )
         else()
             set_target_properties(
-                ${mod_so} PROPERTIES
-                LINK_FLAGS "-Wl,--allow-shlib-undefined"
+                "${mod_so}" PROPERTIES LINK_FLAGS "-Wl,--allow-shlib-undefined"
             )
         endif()
     endif()
 
     if (SKBUILD)
-        install(TARGETS ${mod_so} DESTINATION ${src_dir})
+        set(install_dir_mod_so "${src_dir}")
     else()
-        install(TARGETS ${mod_so} DESTINATION ${CMAKE_SOURCE_DIR}/${src_dir})
+        set(install_dir_mod_so "${CMAKE_SOURCE_DIR}/${src_dir}")
     endif()
+    install(TARGETS "${mod_so}" DESTINATION "${install_dir_mod_so}")
 
 endforeach()
 
