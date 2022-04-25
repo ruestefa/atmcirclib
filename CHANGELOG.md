@@ -1,5 +1,9 @@
 # Atmcirclib: Changelog
 
+## v0.2.3 (2022-04-25)
+
+- Add module `click`
+
 ## v0.2.2 (2022-04-14)
 
 - Add module `intp` (from repo `dpv_th`) with tests
