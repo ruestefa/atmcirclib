@@ -5,6 +5,7 @@ from __future__ import annotations
 import sys
 from pathlib import Path
 from typing import Any
+from typing import Optional
 
 # Third-party
 import click
@@ -17,11 +18,13 @@ import pycg.pycg
 from atmcirclib.click import CONTEXT_SETTINGS
 
 
-def create_call_graph(entry_points: tuple[str, ...]) -> pycg.pycg.CallGraph:
+def create_call_graph(
+    entry_points: tuple[str, ...], package: Optional[str]
+) -> pycg.pycg.CallGraph:
     """Create a call graph with PyCG."""
     call_graph = pycg.pycg.CallGraphGenerator(
         entry_points,
-        package=None,
+        package=package,
         max_iter=-1,
         operation="call-graph",
     )
@@ -50,10 +53,19 @@ def write_graph(graph: igraph.Graph, path: str) -> None:
     context_settings=CONTEXT_SETTINGS,
     help="Create call graph(s) at ENTRY_POINT[S] with PyCG and plot them with iGraph",
 )
-@click.argument(
+@click.option(
+    "-e",
+    "--entry-point",
     "entry_points",
-    metavar="ENTRY_POINT[S]",
-    nargs=-1,
+    help="Entry point to be processed; may be repeated",
+    type=click.Path(exists=True),
+    multiple=True,
+)
+@click.option(
+    "-p",
+    "--package",
+    help="Package to be analyzed",
+    default=None,
 )
 @click.option(
     "-o",
