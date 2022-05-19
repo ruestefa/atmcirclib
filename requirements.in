@@ -1,6 +1,8 @@
 gt4py==2022.04.09
+pycg==0.0.5
 cartopy>=0.20
 click>=8.1
 netcdf4>=1.5
 numpy>=1.22
+python-igraph>=0.9.10
 xarray>=2022.3
