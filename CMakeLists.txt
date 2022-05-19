@@ -68,21 +68,23 @@ set(Python_ROOT ${CMAKE_PREFIX_PATH})
 # Manually set numpy include dir to ensure that `find_package(NumPy, ...)` below finds the correct
 # installation; may otherwise, e.g., chose system installation over active conda environment (!)
 set(NumPy_INCLUDE_DIR ${CMAKE_PREFIX_PATH}/lib/python${CMAKE_PYTHON_VERSION}/site-packages/numpy/core/include)
-
-message("-- Python paths:")
-message("   Python_FIND_STRATEGY = ${Python_FIND_STRATEGY}")
-message("   Python_ROOT          = ${Python_ROOT}")
-message("   NumPy_INCLUDE_DIR    = ${NumPy_INCLUDE_DIR}")
-message("--")
+set(F2PY_INCLUDE_DIR ${CMAKE_PREFIX_PATH}/lib/python${CMAKE_PYTHON_VERSION}/site-packages/numpy/f2py/src)
 
 # Locate Python and relevant packages/includes
 find_package(Python3 ${CMAKE_PYTHON_VERSION} REQUIRED COMPONENTS Interpreter Development NumPy)
 find_package(PythonExtensions REQUIRED) # for ${PYTHON_EXTENSION_MODULE_SUFFIX}
 find_package(PythonExtensions REQUIRED) # for ${PYTHON_EXTENSION_MODULE_SUFFIX}
-message(Python_INCLUDE_DIRS=${Python_INCLUDE_DIRS})
-message(Python_SITELIB=${Python_SITELIB})
 find_package(NumPy REQUIRED MODULE) # for ${NumPy_INCLUDE_DIRS}
-find_package(F2PY REQUIRED) # for ${F2PY_INCLUDE_DIR}
+find_package(F2PY REQUIRED) # for ${F2PY_INCLUDE_DIRS}
+
+message("-- Python paths:")
+message("   Python_FIND_STRATEGY = ${Python_FIND_STRATEGY}")
+message("   Python_ROOT          = ${Python_ROOT}")
+message("   NumPy_INCLUDE_DIR    = ${NumPy_INCLUDE_DIR}")
+message("   NumPy_INCLUDE_DIRS   = ${NumPy_INCLUDE_DIRS}")
+message("   F2PY_INCLUDE_DIR     = ${F2PY_INCLUDE_DIR}")
+message("   F2PY_INCLUDE_DIRS    = ${F2PY_INCLUDE_DIRS}")
+message("--")
 
 #-------------------------------------------------------------------------------
 # Build Fortran extension modules
