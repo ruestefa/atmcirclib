@@ -7,7 +7,6 @@ dependencies:
   - _libgcc_mutex=0.1
   - _openmp_mutex=4.5
   - anaconda-client=1.8.0
-  - arpack=3.7.0
   - astroid=2.11.5
   - asttokens=2.0.5
   - atk-1.0=2.36.0
@@ -70,8 +69,6 @@ dependencies:
   - gettext=0.19.8.1
   - giflib=5.2.1
   - glob2=0.7
-  - glpk=4.65
-  - gmp=6.2.1
   - graphite2=1.3.13
   - graphviz=2.49.1
   - gt4py=2022.04.09
@@ -152,8 +149,6 @@ dependencies:
   - matplotlib-base=3.5.2
   - matplotlib-inline=0.1.3
   - mccabe=0.6.1
-  - metis=5.1.0
-  - mpfr=4.1.0
   - munkres=1.1.4
   - mypy=0.950
   - mypy_extensions=0.4.3
@@ -212,7 +207,6 @@ dependencies:
   - python=3.9.0
   - python-dateutil=2.8.2
   - python-fastjsonschema=2.15.3
-  - python-igraph=0.9.9
   - python-libarchive-c=4.0
   - python_abi=3.9
   - pytz=2022.1
@@ -232,10 +226,7 @@ dependencies:
   - soupsieve=2.3.1
   - sqlite=3.38.5
   - stack_data=0.2.0
-  - suitesparse=5.10.1
   - tabulate=0.8.9
-  - tbb=2021.5.0
-  - texttable=1.6.4
   - tk=8.6.12
   - toml=0.10.2
   - tomli=2.0.1

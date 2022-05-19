@@ -9,10 +9,11 @@ from typing import Optional
 
 # Third-party
 import click
-import igraph
 import pycg
 import pycg.formats
-import pycg.pycg
+from pycg.pycg import CallGraph
+from pycg.pycg import CallGraphGenerator
+from pygraphviz import AGraph
 
 # First-party
 from atmcirclib.click import CONTEXT_SETTINGS
@@ -20,31 +21,32 @@ from atmcirclib.click import CONTEXT_SETTINGS
 
 def create_call_graph(
     entry_points: tuple[str, ...], package: Optional[str]
-) -> pycg.pycg.CallGraph:
+) -> CallGraph:
     """Create a call graph with PyCG."""
-    call_graph = pycg.pycg.CallGraphGenerator(
+    cg = CallGraphGenerator(
         entry_points,
         package=package,
         max_iter=-1,
         operation="call-graph",
     )
-    call_graph.analyze()
-    return call_graph
+    cg.analyze()
+    return cg
 
 
-def prepare_plot_graph(call_graph: pycg.pycg.CallGraph) -> igraph.Graph:
+def prepare_plot_graph(cg: CallGraph, layout: str) -> AGraph:
     """Convert PyCG call graph into iGraph graph for plotting."""
-    call_graph_dict = pycg.formats.Simple(call_graph).generate()
-    call_graph_tuples = [(k, v) for k, vs in call_graph_dict.items() for v in vs]
-    return igraph.Graph.TupleList(call_graph_tuples)
+    cg = pycg.formats.Simple(cg).generate()
+    ag = AGraph(cg, directed=True, overlap=False)
+    ag.layout(layout)
+    return ag
 
 
-def write_graph(graph: igraph.Graph, path: str) -> None:
+def write_graph(ag: AGraph, path: str) -> None:
     """Write graph to disk."""
     print(f"write {path}")
     suffix = Path(path).suffix.lstrip(".")
     if suffix == "svg":
-        graph.write_svg(path)
+        ag.draw(path)
     else:
         raise NotImplementedError(f"output file format '{suffix.upper()}' of {path}")
 
@@ -74,11 +76,20 @@ def write_graph(graph: igraph.Graph, path: str) -> None:
     help="Output file path",
     default="call_graph.svg",
 )
-def cli(out_path: str, **kwargs: Any) -> None:
+@click.option(
+    "-l",
+    "--layout",
+    help=(
+        "Graph layout; options: dot, neato, twopi, circo, fdp, osage, patchwork, sfdp"
+        " (see https://graphviz.org/docs/layouts)"
+    ),
+    default="fdp",
+)
+def cli(layout: str, out_path: str, **kwargs: Any) -> None:
     """Command line interface."""
-    call_graph = create_call_graph(**kwargs)
-    plot_graph = prepare_plot_graph(call_graph)
-    write_graph(plot_graph, out_path)
+    cg = create_call_graph(**kwargs)
+    ag = prepare_plot_graph(cg, layout)
+    write_graph(ag, out_path)
 
 
 if __name__ == "__main__":
