@@ -4,6 +4,7 @@ from __future__ import annotations
 # Standard library
 import sys
 from pathlib import Path
+from typing import Any
 
 # Third-party
 import click
@@ -14,6 +15,35 @@ import pycg.pycg
 
 # First-party
 from atmcirclib.click import CONTEXT_SETTINGS
+
+
+def create_call_graph(entry_points: tuple[str, ...]) -> pycg.pycg.CallGraph:
+    """Create a call graph with PyCG."""
+    call_graph = pycg.pycg.CallGraphGenerator(
+        entry_points,
+        package=None,
+        max_iter=-1,
+        operation="call-graph",
+    )
+    call_graph.analyze()
+    return call_graph
+
+
+def prepare_plot_graph(call_graph: pycg.pycg.CallGraph) -> igraph.Graph:
+    """Convert PyCG call graph into iGraph graph for plotting."""
+    call_graph_dict = pycg.formats.Simple(call_graph).generate()
+    call_graph_tuples = [(k, v) for k, vs in call_graph_dict.items() for v in vs]
+    return igraph.Graph.TupleList(call_graph_tuples)
+
+
+def write_graph(graph: igraph.Graph, path: str) -> None:
+    """Write graph to disk."""
+    print(f"write {path}")
+    suffix = Path(path).suffix.lstrip(".")
+    if suffix == "svg":
+        graph.write_svg(path)
+    else:
+        raise NotImplementedError(f"output file format '{suffix.upper()}' of {path}")
 
 
 @click.command(
@@ -28,27 +58,15 @@ from atmcirclib.click import CONTEXT_SETTINGS
 @click.option(
     "-o",
     "--out",
+    "out_path",
     help="Output file path",
     default="call_graph.svg",
 )
-def cli(entry_points: tuple[str, ...], out: str) -> None:
+def cli(out_path: str, **kwargs: Any) -> None:
     """Command line interface."""
-    call_graph = pycg.pycg.CallGraphGenerator(
-        entry_points,
-        package=None,
-        max_iter=-1,
-        operation="call-graph",
-    )
-    call_graph.analyze()
-    call_graph_dict = pycg.formats.Simple(call_graph).generate()
-    call_graph_tuples = [(k, v) for k, vs in call_graph_dict.items() for v in vs]
-    graph = igraph.Graph.TupleList(call_graph_tuples)
-    print(f"write {out}")
-    suffix = Path(out).suffix.lstrip(".")
-    if suffix == "svg":
-        graph.write_svg(out)
-    else:
-        raise NotImplementedError(f"output file format '{suffix.upper()}' of {out}")
+    call_graph = create_call_graph(**kwargs)
+    plot_graph = prepare_plot_graph(call_graph)
+    write_graph(plot_graph, out_path)
 
 
 if __name__ == "__main__":
