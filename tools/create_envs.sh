@@ -22,6 +22,12 @@ dev_reqs_file="dev-requirements.in"
 run_env_file="environment.yml"
 dev_env_file="dev-environment.yml"
 
+env_names=("${@}")
+default_env_names=("${run_env_name}" "${dev_env_name}")
+if [ ${#env_names[@]} -eq 0 ]; then
+    env_names=("${default_env_names[@]}")
+fi
+
 detect_conda()
 {
     mamba --version 1>/dev/null 2>&1
@@ -74,5 +80,17 @@ create_env()
     return 0
 }
 
-create_env "${run_env_name}" "${run_env_file}" "${run_reqs_file}" || exit
-create_env "${dev_env_name}" "${dev_env_file}" "${run_reqs_file}" "${dev_reqs_file}" || exit
+for env_name in "${env_names[@]}"; do
+    case "${env_name}" in
+        "${run_env_name}")
+            create_env "${run_env_name}" "${run_env_file}" "${run_reqs_file}" || exit
+        ;;
+        "${dev_env_name}")
+            create_env "${dev_env_name}" "${dev_env_file}" "${run_reqs_file}" "${dev_reqs_file}" || exit
+        ;;
+        *)
+            echo "error: invalid env_name '${env_name}'; choices: ${default_env_names[@]}" >&2
+            exit 1
+        ;;
+    esac
+done
