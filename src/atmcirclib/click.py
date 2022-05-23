@@ -2,15 +2,21 @@
 from __future__ import annotations
 
 # Standard library
+import logging
 import sys
+import traceback
 from typing import Any
+from typing import Callable
 from typing import cast
 from typing import NoReturn
 from typing import Optional
+from typing import Type
 from typing import Union
 
 # Third-party
 import click
+from click import Context
+from click import Option
 
 CONTEXT_SETTINGS = {
     "show_default": True,
@@ -69,3 +75,95 @@ def echo_error_help(
             click.echo(cmd.get_help(ctx))
     except SystemExit:
         sys.exit(exc.exit_code)
+
+
+def click_error(
+    ctx: Context,
+    msg: str,
+    exception: Type[Exception] = Exception,
+    echo_prefix: str = "Error: ",
+) -> None:
+    """Print an error message and exit, or raise an exception with traceback."""
+    if ctx.obj["raise"]:
+        raise exception(msg)
+    else:
+        click_exit(ctx, f"{echo_prefix}{msg}", stat=1)
+
+
+def click_exit(ctx: Context, msg: str, stat: int = 0) -> None:
+    """Exit with a message."""
+    click.echo(msg, file=(sys.stdout if stat == 0 else sys.stderr))
+    ctx.exit(stat)
+
+
+def click_set_pdb(ctx: Context, param: Option, value: Any) -> None:
+    """Set argument ``"pdb"`` in click options."""
+    # pylint: disable=W0613  # unused-argument (param)
+    if ctx.obj is None:
+        ctx.obj = {}
+    ctx.obj["pdb"] = value
+    if value:
+        ctx.obj["raise"] = True
+
+
+def click_set_raise(ctx: Context, param: Option, value: Any) -> None:
+    """Set argument ``"raise"`` in click options."""
+    # pylint: disable=W0613  # unused-argument (param)
+    if ctx.obj is None:
+        ctx.obj = {}
+    if value is None:
+        if "raise" not in ctx.obj:
+            ctx.obj["raise"] = False
+    else:
+        ctx.obj["raise"] = value
+
+
+def click_set_verbosity(ctx: Context, param: Option, value: Any) -> None:
+    """Set argument ``"verbosity"`` in click options."""
+    # pylint: disable=W0613  # unused-argument (ctx, param)
+    if ctx.obj is None:
+        ctx.obj = {}
+    ctx.obj["verbosity"] = value
+    set_log_level(value)
+
+
+def pdb_wrap_callback(fct: Callable[..., Any]) -> Callable[..., Any]:
+    """Wrapp click callback functions to conditionally drop into ipdb."""
+
+    def wrapper(ctx: Context, param: Option, value: Any) -> Any:
+        """Drop into ``ipdb`` session if ``fct`` call raises an exception."""
+        fct_loc = pdb_wrap(fct) if (ctx.obj or {}).get("pdb") else fct
+        return fct_loc(ctx, param, value)
+
+    return wrapper
+
+
+def pdb_wrap(fct: Callable[..., Any]) -> Callable[..., Any]:
+    """Decorate a function to drop into ipdb if an exception is raised."""
+
+    def wrapper(*args: Any, **kwargs: Any) -> Any:
+        """Drop into ``ipdb`` session if ``fct`` call raises an exception."""
+        try:
+            return fct(*args, **kwargs)
+        except Exception as e:  # pylint: disable=W0703  # broad-except
+            if isinstance(e, click.exceptions.Exit):
+                if e.exit_code == 0:  # pylint: disable=E1101  # no-member
+                    sys.exit(0)
+            pdb = __import__("ipdb")  # trick pre-commit hook "debug-statements"
+            traceback.print_exc()
+            click.echo()
+            pdb.post_mortem()
+            sys.exit(1)
+
+    return wrapper
+
+
+def set_log_level(verbosity: int) -> None:
+    """Set logging level based on verbosity value."""
+    if verbosity <= 0:
+        logging.getLogger().setLevel(logging.INFO)
+    elif verbosity == 1:
+        # mypy v0.942 error: 'Module has no attribute "VERBOSE"' (python v3.9.0)
+        logging.getLogger().setLevel(logging.VERBOSE)  # type: ignore
+    elif verbosity >= 2:
+        logging.getLogger().setLevel(logging.DEBUG)
