@@ -1,5 +1,14 @@
 # Atmcirclib: Changelog
 
+## v0.2.4 (2022-05-23)
+
+- Add additional functions to module `click` (from `pyflexplot` via `cosmo_nawdex`)
+  - Wrappers to drop into `ipdb` if exception/callback raises an exception
+- Fix issue with `f2py` include path in `CMakeLists.txt`
+- Write pair of bash scripts (`tools/{,run_}update_min_versions.sh`) to set min. versions in `requirements.in` to minor version of currently installed version
+- Use `mamba` in `tox` to create envs
+- Write script (`tools/call_graph.py`) to plot the call graph of a python module/package (based on `pycg` and `pygraphviz`)
+
 ## v0.2.3 (2022-04-25)
 
 - Add module `click`
