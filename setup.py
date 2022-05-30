@@ -86,7 +86,7 @@ with open("requirements.in") as f:
     install_requires: list[str] = list(map(str, parse_requirements(f.readlines())))
 
 # Format: command=package.module:function
-scripts: list[str] = []
+console_scripts: list[str] = []
 
 # Obtain version and root of currently active Python environment for cmake
 curr_python_version: str = f"{sys.version_info.major}.{sys.version_info.minor}"
@@ -105,7 +105,7 @@ setup(
     # packages=find_packages("src"),
     packages=[PROJECT_NAME] if sys.argv[1] == "develop" else find_packages("src"),
     package_dir={"": "src"},
-    entry_points={"console_scripts": scripts},
+    entry_points={"console_scripts": console_scripts},
     package_data=find_py_typed(),
     include_package_data=True,
     python_requires=PYTHON_REQUIRES,
