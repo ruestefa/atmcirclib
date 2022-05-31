@@ -1,5 +1,11 @@
 # Atmcirclib: Changelog
 
+## v0.3.0 (2022-05-31)
+
+- Move `atmcirclib.tools.call_graph` and `atmcirclib.tools.create_recipe` to `atmcirctools v0.2.0` as commands `act call-graph` and `act create-recipe`
+- Remove module `atmcirclib.tools`
+- Merge `tools/{,run_}update_min_versions.sh` as `tools/update_min_reqs_versions.sh` and implement handling of comments
+
 ## v0.2.4 (2022-05-23)
 
 - Add additional functions to module `click` (from `pyflexplot` via `cosmo_nawdex`)

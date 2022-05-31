@@ -18,7 +18,7 @@ from skbuild import setup
 PackageDataT = Dict[str, List[str]]
 
 PROJECT_NAME: str = "atmcirclib"
-PROJECT_VERSION: str = "0.2.4"
+PROJECT_VERSION: str = "0.3.0"
 PYTHON_REQUIRES: str = ">=3.9"
 
 
