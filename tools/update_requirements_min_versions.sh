@@ -93,9 +93,16 @@ update_min_version_file()
 
 main()
 {
-    local infile="${1}"
-    local envfile="${2}"
-    update_min_version_file "${infile}" "${envfile}"
+    case ${#} in
+        0) local prefixes=("" "dev-");;
+        *) local prefixes=("${@}");;
+    esac
+    local prefix
+    for prefix in "${prefixes}"; do
+        local infile="${prefix}requirements.in"
+        local envfile="${prefix}environment.yml"
+        update_min_version_file "${infile}" "${envfile}"
+    done
 }
 
 
