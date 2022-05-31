@@ -50,24 +50,35 @@ check_file_exists()
 }
 
 
+process_requirements_line()
+{
+    local line="${1}"
+    local env="${2}"
+    ${DBG} && echo "DBG line='${line}'" >&2
+    local content="$(echo "${line}" | \sed 's/^\([^#]*[a-zA-Z0-9_-]\)\?\( *#.*\)\?/\1/')"
+    local comment="$(echo "${line}" | \sed 's/^\([^#]*[a-zA-Z0-9_-]\)\?\( *#.*\)\?/\2/')"
+    ${DBG} && echo "DBG content='${content}'" >&2
+    ${DBG} && echo "DBG comment='${comment}'" >&2
+    content=$(echo "${content}" | \sed -s 's/^\([a-zA-Z0-9_-]\+\).*/\1/g')
+    ${DBG} && echo "DBG ${env}" | \grep -- "- ${content}=" >&2
+    echo "${env}" | \grep -q -- "- ${content}="
+    if [[ "${?}" -eq 0 ]]; then
+        local rx='s/ *- \([^=]\+\)=\([0-9]\+\(\.[0-9]\+\)\?\).*/\1>=\2/'
+        content="$(echo "${env}" | \grep -- "- ${content}=" | \sed "${rx}")"
+    fi
+    echo "${content}${comment}"
+}
+
+
 update_min_versions()
 {
     local infile="${1}"
     local envfile="${2}"
     local env="$(get_env "${envfile}")" || return
-    local i
-    for i in $(cat "${infile}"); do
-        ${DBG} && echo "DBG '${i}'" >&2
-        i=$(echo $i | \sed -s 's/^\([a-zA-Z0-9_-]\+\).*/\1/g')
-        ${DBG} && echo "DBG '${i}'" >&2
-        ${DBG} && echo "DBG ${env}" | \grep -- "- $i=" >&2
-        echo "${env}" | \grep -q -- "- $i="
-        if [[ "${?}" -ne 0 ]]; then
-            echo "${i}"
-        else
-            echo "${env}" | \grep -- "- $i=" | \sed 's/ *- \([^=]\+\)=\([0-9]\+\(\.[0-9]\+\)\?\).*/\1>=\2/'
-        fi
-    done
+    local line
+    while read -r line; do
+        process_requirements_line "${line}" "${env}" || return
+    done < "${infile}"
 }
 
 
@@ -85,9 +96,14 @@ update_min_version_file()
         echo "error: tmp infile '${infile_tmp}' already exists" >&2
         return 1
     }
-    \mv -v "${infile}" "${infile_tmp}"
-    update_min_versions "${infile_tmp}" "${envfile}" > "${infile}" || return
-    \rm -v "${infile_tmp}"
+    local vflag="$(${DBG} && echo "-v")"
+    \mv ${vflag} "${infile}" "${infile_tmp}" >&2
+    update_min_versions "${infile_tmp}" "${envfile}" > "${infile}" || {
+        ${DBG} && echo "DBG restore infile '${infile}' from '${infile_tmp}'" >&2
+        \mv -v "${infile_tmp}" "${infile}" >&2
+        return 1
+    }
+    \rm ${vflag} "${infile_tmp}" >&2
 }
 
 
@@ -98,10 +114,12 @@ main()
         *) local prefixes=("${@}");;
     esac
     local prefix
-    for prefix in "${prefixes}"; do
+    for prefix in "${prefixes[@]}"; do
+        ${DBG} && echo "DBG prefix='${prefix}'" >&2
         local infile="${prefix}requirements.in"
         local envfile="${prefix}environment.yml"
-        update_min_version_file "${infile}" "${envfile}"
+        echo "${infile} <- $([[ "${envfile}" != "" ]] && echo "${envfile}" || echo "conda")"
+        update_min_version_file "${infile}" "${envfile}" || return
     done
 }
 
