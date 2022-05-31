@@ -1,8 +1,8 @@
+# atmcirc channel (pinned)
 gt4py==2022.04.09
-pycg==0.0.5
+# other channels (unpinned)
 cartopy>=0.20
 click>=8.1
-pygraphviz>=1.9
 netcdf4>=1.5
 numpy>=1.22
 xarray>=2022.3
