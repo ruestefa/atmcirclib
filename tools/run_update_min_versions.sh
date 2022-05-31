@@ -6,20 +6,20 @@ get_script_dir()
     \cd "$(dirname "${BASH_SOURCE[0]}")" && \pwd
 }
 
-update_min_versions()
+
+main()
 {
-    local infile="${1}"
-    local envfile="${2}"
-    local infile_tmp="${infile}.tmp"
-    [ -f "${infile_tmp}" ] && {
-        echo "error: tmp infile '${infile_tmp}' already exists" >&2
-        return 1
-    }
-    \mv -v "${infile}" "${infile_tmp}"
-    echo "update_min_versions.sh '${infile_tmp}' '${envfile}' > '${infile}'"
-    bash $(get_script_dir)/update_min_versions.sh "${infile_tmp}" "${envfile}" > "${infile}" || return
-    \rm -v "${infile_tmp}"
+    case ${#} in
+        0) local prefixes=("" "dev-");;
+        *) local prefixes=("${@}");;
+    esac
+    local prefix
+    for prefix in "${prefixes}"; do
+        local infile="${prefix}requirements.in"
+        local envfile="${prefix}environment.yml"
+        bash $(get_script_dir)/update_min_versions.sh "${infile}" "${envfile}" || exit
+    done
 }
 
-update_min_versions requirements.in environment.yml || exit
-update_min_versions dev-requirements.in dev-environment.yml || exit
+
+main "${@}"
