@@ -40,8 +40,6 @@ class Command(click.Command):
 class Group(click.Group):
     """Custom click command group."""
 
-    # command_class = Command
-
     def invoke(self, ctx: click.Context) -> None:
         """Run the command, and in case of an error, provide help message."""
         try:
