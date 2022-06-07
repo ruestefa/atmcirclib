@@ -147,7 +147,8 @@ class TrajStartPointDataset:
             skiprows=n_header,
             dtype=dtype,
         )
-        return cls(cls._init_dataset(arr["lon"], arr["lat"], arr["z"]))
+        # mypy (v0.960) doesn't know structured array notation (numpy v1.22.4)
+        return cls(cls._init_dataset(arr["lon"], arr["lat"], arr["z"]))  # type: ignore
 
     @classmethod
     def from_trajs(
