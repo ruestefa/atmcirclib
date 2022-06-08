@@ -34,13 +34,13 @@ class TrajDatasetDsFactory:
         coords_d: Optional[
             Union[
                 dict[str, list[float]],
-                dict[str, npt.NDArray[np.generic]],
+                dict[str, npt.NDArray[np.float_]],
             ]
         ] = None,
         data_d: Optional[
             Union[
                 dict[str, list[list[float]]],
-                dict[str, npt.NDArray[np.generic]],
+                dict[str, npt.NDArray[np.float_]],
             ]
         ] = None,
         dtype_d: Optional[Mapping[str, npt.DTypeLike]] = None,
@@ -51,8 +51,8 @@ class TrajDatasetDsFactory:
     ) -> None:
         """Create a new instance."""
         self.dims: tuple[str, str] = dims or ("time", "id")
-        self.coords_d: dict[str, npt.NDArray[np.generic]]
-        self.data_d: dict[str, npt.NDArray[np.generic]]
+        self.coords_d: dict[str, npt.NDArray[np.float_]]
+        self.data_d: dict[str, npt.NDArray[np.float_]]
         self.dtype_d: dict[str, npt.DTypeLike] = dict(dtype_d or {})
         self.scale_fact_d: dict[str, float] = dict(scale_fact_d or {})
         self.attrs_d: dict[str, dict[str, Any]] = {
@@ -100,12 +100,12 @@ class TrajDatasetDsFactory:
         raw_arrs: Union[
             Mapping[str, list[float]],
             Mapping[str, list[list[float]]],
-            Mapping[str, npt.NDArray[np.generic]],
+            Mapping[str, npt.NDArray[np.float_]],
         ],
-    ) -> dict[str, npt.NDArray[np.generic]]:
+    ) -> dict[str, npt.NDArray[np.float_]]:
         """Turn raw value lists into properly scaled data arrays."""
-        arrs_by_name: dict[str, npt.NDArray[np.generic]] = {}
-        arr: npt.NDArray[np.generic]
+        arrs_by_name: dict[str, npt.NDArray[np.float_]] = {}
+        arr: npt.NDArray[np.float_]
         for name, data in raw_arrs.items():
             # pylint: disable=E1101  # no-member ('Field'.get)
             arr = np.asarray(data, self.dtype_d.get(name, np.float32))

@@ -27,7 +27,7 @@ RAW_DATA_D: dict[str, list[list[float]]] = {}
 SCALE_FACT_D: dict[str, float] = {}
 DTYPE_D: dict[str, npt.DTypeLike] = {}
 ATTRS_D: dict[str, dict[str, str]] = {}
-REF_DATA_D: dict[str, npt.NDArray[np.generic]]
+REF_DATA_D: dict[str, npt.NDArray[np.float_]]
 
 # Test data is based on the file traj_t001914_p001.nc from the simulation
 # cosmo_0.04_701x661x80/20s_explicit/2016092000/traj-pvtend.45ms-1_-4h_21_12_reduced

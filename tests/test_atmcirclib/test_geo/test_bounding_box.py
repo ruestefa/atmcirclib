@@ -1,13 +1,8 @@
 """Test class ``atmcirclib.geo.BoundingBox``."""
 from __future__ import annotations
 
-# Standard library
-from typing import cast
-
 # Third-party
-# Third-paty
 import numpy as np
-import numpy.typing as npt
 import pytest
 
 # First-party
@@ -77,9 +72,8 @@ class Test_FromCoords:
 
     def test(self) -> None:
         """Create an instance from coordinate arrays."""
-        # mypy 0.941 thinks arange returns unsigned-int arrays (numpy 1.22.3)
-        xs = cast(npt.NDArray[np.float_], np.arange(-20, 5.1, 2))
-        ys = cast(npt.NDArray[np.float_], np.arange(30, 45.1, 2))
+        xs = np.arange(-20, 5.1, 2)
+        ys = np.arange(30, 45.1, 2)
         bbx = BoundingBox.from_coords(xs, ys)
         assert bbx.llx == xs[0]
         assert bbx.urx == xs[-1]

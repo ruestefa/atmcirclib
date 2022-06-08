@@ -4,7 +4,6 @@ from __future__ import annotations
 # Standard library
 import dataclasses as dc
 from typing import Any
-from typing import cast
 
 # Third-party
 import numpy as np
@@ -31,22 +30,14 @@ RAW_DATA_D: dict[str, list[list[float]]] = {}
 SCALE_FACT_D: dict[str, float] = {}
 DTYPE_D: dict[str, npt.DTypeLike] = {}
 ATTRS_D: dict[str, dict[str, str]] = {}
-REF_DATA_D: dict[str, npt.NDArray[np.generic]]
+REF_DATA_D: dict[str, npt.NDArray[np.float_]]
 
 RLON_LIM: tuple[float, float] = (-10.0, 0.0)
 RLAT_LIM: tuple[float, float] = (-10.0, 0.0)
 Z_LIM: tuple[float, float] = (0.0, 20_000.0)
 
-# mypy 0.941 thinks arange returns signed-int array (numpy 1.22.3)
-RLON: npt.NDArray[np.float_] = cast(
-    npt.NDArray[np.float_],
-    np.arange(RLON_LIM[0], RLON_LIM[1] + 0.1, 1.0),
-)
-# mypy 0.941 thinks arange returns signed-int array (numpy 1.22.3)
-RLAT: npt.NDArray[np.float_] = cast(
-    npt.NDArray[np.float_],
-    np.arange(RLAT_LIM[0], RLAT_LIM[1] + 0.1, 1.0),
-)
+RLON: npt.NDArray[np.float_] = np.arange(RLON_LIM[0], RLON_LIM[1] + 0.1, 1.0)
+RLAT: npt.NDArray[np.float_] = np.arange(RLAT_LIM[0], RLAT_LIM[1] + 0.1, 1.0)
 
 DIMS: tuple[str, str] = ("time", "id")
 VNAN: float = -999.0
