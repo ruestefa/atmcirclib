@@ -95,38 +95,35 @@ def click_exit(ctx: Context, msg: str, stat: int = 0) -> None:
     ctx.exit(stat)
 
 
-def click_set_pdb(ctx: Context, param: Option, value: Any) -> None:
-    """Set argument ``"pdb"`` in click options.
+def click_set_ctx_obj(ctx: click.Context, param: click.Option, value: Any) -> None:
+    """Set the parameter in click context object.
+
+    Pass as ``callback`` argument to a ``click.option(...)`` decorator.
 
     Args:
-        ctx: Click context, requires decorator ``@click.pass_context``.
+        ctx: Click context.
 
         param: Click option.
 
-        value: Value of click option.
+        value: Value of ``param``.
 
     Example:
-        Add option --pdb to drop into debugger::
+        Add option to click context object::
 
             >>> @click.option(
-            ...     "--pdb/--no-pdb",
-            ...     help="Drop into debugger when an exception is raised.",
-            ...     callback=click_set_pdb,
+            ...     "--foo/--no-foo",
+            ...     callback=click_set_ctx_obj,
             ...     is_eager=True,
             ...     expose_value=False,
             ... )
-            ... @click.pass_context
-            ... def cli(ctx: click.Context) -> None:
-            ...     main_ = wrap_pdb(main) if ctx.obj["pdb"] else main
-            ...     main()
+            >>> @click.pass_context
+            >>> def cli(ctx: click.Context) -> None:
+            ...     print(f"{ctx.obj['foo']=}")
 
     """
-    # pylint: disable=W0613  # unused-argument (param)
     if ctx.obj is None:
         ctx.obj = {}
-    ctx.obj["pdb"] = value
-    if value:
-        ctx.obj["raise"] = True
+    ctx.obj[param.name] = value
 
 
 def click_set_raise(ctx: Context, param: Option, value: Any) -> None:
