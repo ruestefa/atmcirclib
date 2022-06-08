@@ -1,5 +1,12 @@
 # Atmcirclib: Changelog
 
+## v0.4.0 (2022-06-08)
+
+- Improve functions used to drop into pdb in case of exception in `click` module, incl. docstrings
+- Add module `simulations` (from `cosmo_nawdex` repo)
+- Add new requirement `pandas` and update envs
+- Remove conda build file archive; only retain latest as `recipe/meta.yaml`
+
 ## v0.3.0 (2022-05-31)
 
 - Move `atmcirclib.tools.call_graph` and `atmcirclib.tools.create_recipe` to `atmcirctools v0.2.0` as commands `act call-graph` and `act create-recipe`
