@@ -95,7 +95,31 @@ def click_exit(ctx: Context, msg: str, stat: int = 0) -> None:
 
 
 def click_set_pdb(ctx: Context, param: Option, value: Any) -> None:
-    """Set argument ``"pdb"`` in click options."""
+    """Set argument ``"pdb"`` in click options.
+
+    Args:
+        ctx: Click context, requires decorator ``@click.pass_context``.
+
+        param: Click option.
+
+        value: Value of click option.
+
+    Example:
+        Add option --pdb to drop into debugger::
+
+            >>> @click.option(
+            ...     "--pdb/--no-pdb",
+            ...     help="Drop into debugger when an exception is raised.",
+            ...     callback=click_set_pdb,
+            ...     is_eager=True,
+            ...     expose_value=False,
+            ... )
+            ... @click.pass_context
+            ... def cli(ctx: click.Context) -> None:
+            ...     main_ = wrap_pdb(main) if ctx.obj["pdb"] else main
+            ...     main()
+
+    """
     # pylint: disable=W0613  # unused-argument (param)
     if ctx.obj is None:
         ctx.obj = {}
