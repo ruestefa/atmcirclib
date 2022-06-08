@@ -126,6 +126,61 @@ def click_set_ctx_obj(ctx: click.Context, param: click.Option, value: Any) -> No
     ctx.obj[param.name] = value
 
 
+def click_pdb_wrap_command(
+    arg: str = "pdb",
+    *,
+    pass_context: bool = False,
+) -> Callable[..., Any]:
+    """Decorate a click command to drop into pdb when exception is raised.
+
+    The command is wrapped in ``pdb_wrap`` depending on the value of ``arg`` in
+    the click context object, which must be passed by preceding the decorator
+    with ``@click.pass_context`` (see example below).
+
+    Args:
+        arg (optional): Name of argument in the click context object; if it is
+            present and true, the command function is wrapped in ``pdb_wrap``.
+
+        pass_context (optional): Pass the click context object on to the command
+            function.
+
+    Example:
+        Wrap click command depending on global click option::
+
+            >>> @click.group()
+            >>> @click.option(
+            ...     "--pdb/--no-pdb",
+            ...     "drop_into_pdb",
+            ...     callback=click_set_ctx_obj,
+            ...     is_eager=True,
+            ...     expose_value=False,
+            ... )
+            >>> def cli():
+            ...     return 0
+            >>> @cli.command()
+            >>> @click.pass_context
+            >>> @click_pdb_wrap_command("drop_into_pdb", pass_context=True)
+            >>> def say_hi(ctx):
+            ...     print("hi")
+
+    """
+
+    def decorator(fct: Callable[..., Any]) -> Callable[..., Any]:
+        """Create the actual decorator."""
+
+        @wraps(fct)
+        def wrapper(ctx: click.Context, *args: Any, **kwargs: Any) -> Any:
+            """Wrap the click command function."""
+            fct_ = pdb_wrap(fct) if ctx.obj.get(arg) else fct
+            if pass_context:
+                return fct_(ctx, *args, **kwargs)
+            return fct_(*args, **kwargs)
+
+        return wrapper
+
+    return decorator
+
+
 def click_set_raise(ctx: Context, param: Option, value: Any) -> None:
     """Set argument ``"raise"`` in click options."""
     # pylint: disable=W0613  # unused-argument (param)
