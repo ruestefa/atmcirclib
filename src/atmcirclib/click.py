@@ -5,6 +5,7 @@ from __future__ import annotations
 import logging
 import sys
 import traceback
+from functools import wraps
 from typing import Any
 from typing import Callable
 from typing import cast
@@ -152,6 +153,7 @@ def click_set_verbosity(ctx: Context, param: Option, value: Any) -> None:
 def pdb_wrap_callback(fct: Callable[..., Any]) -> Callable[..., Any]:
     """Wrapp click callback functions to conditionally drop into ipdb."""
 
+    @wraps(fct)
     def wrapper(ctx: Context, param: Option, value: Any) -> Any:
         """Drop into ``ipdb`` session if ``fct`` call raises an exception."""
         fct_loc = pdb_wrap(fct) if (ctx.obj or {}).get("pdb") else fct
@@ -163,6 +165,7 @@ def pdb_wrap_callback(fct: Callable[..., Any]) -> Callable[..., Any]:
 def pdb_wrap(fct: Callable[..., Any]) -> Callable[..., Any]:
     """Decorate a function to drop into ipdb if an exception is raised."""
 
+    @wraps(fct)
     def wrapper(*args: Any, **kwargs: Any) -> Any:
         """Drop into ``ipdb`` session if ``fct`` call raises an exception."""
         try:
