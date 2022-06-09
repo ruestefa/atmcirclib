@@ -64,7 +64,7 @@ description_files: list[str] = [
 metadata: dict[str, Any] = {
     "name": PROJECT_NAME,
     "version": PROJECT_VERSION,
-    "description": "Python library of Atmospheric Circulation group",
+    "description": "Python library of the Atmospheric Circulation Group",
     "long_description": read_present_files(description_files),
     "author": "Stefan Ruedisuehli",
     "author_email": "stefan.ruedisuehli@env.ethz.ch",
@@ -110,6 +110,7 @@ setup(
     include_package_data=True,
     python_requires=PYTHON_REQUIRES,
     install_requires=install_requires,
+    zip_save=False,
     cmake_args=cmake_args,
     **metadata,
 )

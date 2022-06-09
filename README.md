@@ -1,4 +1,4 @@
-# Atmcirclib: Python tools to analyze the atmospheric circulation
+# AtmCircLib: Python library of the Atmospheric Circulation Group
 
 ## Create new conda release
 
