@@ -13,6 +13,7 @@ dependencies:
   - backcall=0.2.0
   - backports=1.0
   - backports.functools_lru_cache=1.6.4
+  - bcrypt=3.2.2
   - beautifulsoup4=4.11.1
   - black=22.3.0
   - boltons=21.0.0
@@ -38,6 +39,7 @@ dependencies:
   - conda=4.12.0
   - conda-build=3.21.9
   - conda-package-handling=1.8.1
+  - copier=6.0.0
   - cryptography=37.0.2
   - curl=7.83.1
   - cycler=0.11.0
@@ -48,6 +50,7 @@ dependencies:
   - dill=0.3.5.1
   - distlib=0.3.4
   - distro=1.6.0
+  - dunamai=1.12.0
   - executing=0.8.3
   - expat=2.4.8
   - filelock=3.7.1
@@ -70,8 +73,10 @@ dependencies:
   - ipdb=0.13.9
   - ipython=8.4.0
   - isort=5.10.1
+  - iteration_utilities=0.11.0
   - jedi=0.18.1
   - jinja2=3.1.2
+  - jinja2-ansible-filters=1.3.1
   - jpeg=9e
   - jsonschema=4.6.0
   - jupyter_core=4.10.0
@@ -106,6 +111,7 @@ dependencies:
   - libnghttp2=1.47.0
   - libopenblas=0.3.20
   - libpng=1.6.37
+  - libsodium=1.0.18
   - libsolv=0.7.22
   - libssh2=1.10.0
   - libstdcxx-ng=12.1.0
@@ -140,6 +146,7 @@ dependencies:
   - openssl=1.1.1o
   - packaging=21.3
   - pandas=1.4.2
+  - paramiko=2.11.0
   - parso=0.8.3
   - patchelf=0.14.5
   - pathspec=0.9.0
@@ -147,12 +154,14 @@ dependencies:
   - pickleshare=0.7.5
   - pillow=9.1.1
   - pip=22.1.2
-  - pkginfo=1.8.2
+  - pkginfo=1.8.3
   - platformdirs=2.5.1
   - pluggy=1.0.0
+  - plumbum=1.7.2
   - pre-commit=2.19.0
   - proj=9.0.0
   - prompt-toolkit=3.0.29
+  - prompt_toolkit=3.0.29
   - psutil=5.9.1
   - pthread-stubs=0.4
   - ptyprocess=0.7.0
@@ -169,6 +178,7 @@ dependencies:
   - pyflakes=2.4.0
   - pygments=2.12.0
   - pylint=2.14.1
+  - pynacl=1.5.0
   - pyopenssl=22.0.0
   - pyparsing=3.0.9
   - pyproj=3.3.1
@@ -183,10 +193,12 @@ dependencies:
   - python_abi=3.9
   - pytz=2022.1
   - pyyaml=6.0
+  - pyyaml-include=1.3
+  - questionary=1.10.0
   - readline=8.1
   - reproc=14.2.3
   - reproc-cpp=14.2.3
-  - requests=2.27.1
+  - requests=2.28.0
   - rhash=1.4.1
   - ripgrep=13.0.0
   - ruamel_yaml=0.15.80

@@ -1,3 +1,6 @@
+# atmcirc channel (pinned)
+copier=6.0.0
+# other channels (unpinned)
 anaconda-client>=1.8
 black>=22.3
 cmake>=3.23
