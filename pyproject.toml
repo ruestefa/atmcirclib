@@ -1,6 +1,6 @@
 [build-system]
 requires = [
-    "cmake>=3.23",
+    "cmake>=3.22",
     "ninja>=1.10",
     "numpy>=1.22",
     "scikit-build>=0.14",

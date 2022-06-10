@@ -3,7 +3,7 @@ copier=6.0.0
 # other channels (unpinned)
 anaconda-client>=1.8
 black>=22.3
-cmake>=3.23
+cmake>=3.22
 conda-build>=3.21
 flake8>=4.0
 ipdb>=0.13
