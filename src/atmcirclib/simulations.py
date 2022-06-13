@@ -766,6 +766,14 @@ class Simulations(list[Simulation]):
         return sims
 
 
+class SimulationScanner:
+    """Scan the file system to find simulation runs."""
+
+    def find_simulation_run_paths(self, root: Path) -> list[Path]:
+        """Find paths to all simulation runs under ``root``."""
+        return [Path(p).parent for p in root.rglob("INPUT_ORG")]
+
+
 class Modules(list[ModuleType]):
     """A list of Python modules."""
 
