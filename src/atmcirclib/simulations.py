@@ -644,6 +644,7 @@ class Simulation:
 
     def find_redundant_output(
         self,
+        check_exists: bool = True,
     ) -> dict[OutputStreamType, dict[pd.Timestamp, list[Path]]]:
         """Find redundant output files produced by runs of a simulation."""
         if not self.get_runs():
@@ -667,7 +668,7 @@ class Simulation:
                 for stream in streams:
                     if any(step in interval for interval in stream.intervals):
                         file_path = stream.format_file_path(
-                            step, start=start, check_exists=True
+                            step, start=start, check_exists=check_exists
                         )
                         multi_steps[stream_type][step].append(file_path)
         return multi_steps
@@ -744,7 +745,7 @@ class Simulations(list[Simulation]):
         paths_sims: list[list[Path]] = []
         for sim in self:
             paths_sims.append([])
-            for paths_by_step in sim.find_redundant_output().values():
+            for paths_by_step in sim.find_redundant_output(check_exists=False).values():
                 for paths_sim in paths_by_step.values():
                     for path in paths_sim:
                         paths_sims[-1].append(path)
