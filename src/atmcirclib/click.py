@@ -166,7 +166,7 @@ def click_pdb_wrap_command(
     """
 
     def decorator(fct: Callable[..., Any]) -> Callable[..., Any]:
-        """Create the actual decorator."""
+        """Create the decorator."""
 
         @wraps(fct)
         def wrapper(ctx: click.Context, *args: Any, **kwargs: Any) -> Any:
