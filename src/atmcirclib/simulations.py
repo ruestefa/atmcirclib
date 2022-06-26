@@ -485,13 +485,17 @@ class SimulationRun:
         self.output.set_run(self)
         self.label: str = self._init_label([self.abs_path, self.rel_path])
         self.end: pd.Timestamp = self.start + self.end_rel
-        self.write_start: pd.Timestamp = min(
-            [interval.left for stream in self.output for interval in stream.intervals]
-        )
-        self.write_end: pd.Timestamp = max(
-            [interval.right for stream in self.output for interval in stream.intervals]
-        )
-        self.write_duration: pd.Timedelta = self.write_end - self.write_start
+        self.write_start: Optional[pd.Timestamp]
+        self.write_end: Optional[pd.Timestamp]
+        self.write_duration: Optional[pd.Timedelta]
+        if not self.output:
+            self.write_start = None
+            self.write_end = None
+            self.write_duration = None
+        else:
+            self.write_start = min([i.left for s in self.output for i in s.intervals])
+            self.write_end = max([i.right for s in self.output for i in s.intervals])
+            self.write_duration = self.write_end - self.write_start
 
         self._simulation: Optional[Simulation] = None
 
