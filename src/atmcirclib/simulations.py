@@ -461,10 +461,11 @@ class SimulationRun:
         *,
         path: Optional[PathLike_T] = None,
         rel_path: Optional[PathLike_T] = None,
-        output: Optional[OutputStreamsLike_T] = None,
+        rel_restart: Optional[pd.Timedelta] = None,
         end_rel: Optional[Union[pd.Timedelta, DDHH, DDHHMM]] = None,
         end_type: Optional[Union[SimulationRunEndType, str]] = None,
         simulation_run_end_types: Optional[SimulationRunEndTypes] = None,
+        output: Optional[OutputStreamsLike_T] = None,
     ) -> None:
         """Create an instance of ``SimulationRun``."""
         self._simulation: Optional[Simulation] = None
@@ -480,6 +481,7 @@ class SimulationRun:
                 f"error creating output streams for run at path: {path}"
             ) from e
         self.output: OutputStreams = streams
+        self.rel_restart: pd.Timedelta = rel_restart or pd.Timedelta(0)
         self.end_rel: pd.Timedelta = self._init_end_rel(
             end_rel, self.output, self.get_start()
         )
