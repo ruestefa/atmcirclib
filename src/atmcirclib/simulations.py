@@ -275,7 +275,7 @@ class OutputStream:
             steps = self.get_steps()
         except EmptyOutputStreamError:
             return []
-        start = self.get_run().get_simulation().get_start()
+        start = self.get_run().simulation.start
         paths: list[Path] = []
         for step in steps:
             path = self.format_file_path(step, start=start, check_exists=False)
@@ -457,8 +457,8 @@ class SimulationRun:
 
     def __init__(
         self,
+        simulation: Simulation,
         *,
-        start: Union[pd.Timestamp, YYYYMMDDHH],
         path: Optional[PathLike_T] = None,
         rel_path: Optional[PathLike_T] = None,
         output: Optional[OutputStreamsLike_T] = None,
@@ -467,17 +467,17 @@ class SimulationRun:
         simulation_run_end_types: Optional[SimulationRunEndTypes] = None,
     ) -> None:
         """Create an instance of ``SimulationRun``."""
+        self.simulation: Simulation = simulation
         self.abs_path: Optional[Path] = None if path is None else Path(path)
         self.rel_path: Optional[Path] = None if rel_path is None else Path(rel_path)
-        self.start: pd.Timestamp = init_timestamp(start)
         try:
-            streams = OutputStreams.create(output or {}, start=self.start)
+            streams = OutputStreams.create(output or {}, start=self.simulation.start)
         except Exception as e:
             path = self.abs_path or self.rel_path
             raise Exception(f"error creating output streams for run at {path}") from e
         self.output: OutputStreams = streams
         self.end_rel: pd.Timedelta = self._init_end_rel(
-            end_rel, self.output, self.start
+            end_rel, self.output, self.simulation.start
         )
         self.end_type: SimulationRunEndType = self._init_end_type(
             end_type, simulation_run_end_types
@@ -485,7 +485,7 @@ class SimulationRun:
 
         self.output.set_run(self)
         self.label: str = self._init_label([self.abs_path, self.rel_path])
-        self.end: pd.Timestamp = self.start + self.end_rel
+        self.end: pd.Timestamp = self.simulation.start + self.end_rel
         self.write_start: Optional[pd.Timestamp]
         self.write_end: Optional[pd.Timestamp]
         self.write_duration: Optional[pd.Timedelta]
@@ -498,17 +498,9 @@ class SimulationRun:
             self.write_end = max([i.right for s in self.output for i in s.intervals])
             self.write_duration = self.write_end - self.write_start
 
-        self._simulation: Optional[Simulation] = None
-
-    def get_simulation(self) -> Simulation:
-        """Get the linked simulation."""
-        if self._simulation is None:
-            raise Exception("run is not linked to a simulation")
-        return self._simulation
-
     def link_simulation(self, sim: Simulation) -> None:
         """Link a simulation to the run."""
-        self._simulation = sim
+        self.simulation = sim
 
     def get_full_path(self) -> Path:
         """Get the absolute path to the simulation run."""
@@ -516,13 +508,13 @@ class SimulationRun:
         error = ""
         if self.abs_path is not None:
             path = self.abs_path
-        elif self._simulation is not None:
+        elif self.simulation is not None:
             if self.rel_path is not None:
-                path = self._simulation.path / self.rel_path
+                path = self.simulation.path / self.rel_path
             else:
                 error = "_rel_path is None"
         else:
-            error = "_abs_path and _simulation are both None"
+            error = "_abs_path and simulation are both None"
         if path is None:
             raise Exception(
                 "either initialize with absolute path; or initialize with relative path"
@@ -549,7 +541,7 @@ class SimulationRun:
     def __repr__(self) -> str:
         """Return a string representation."""
         path = self.get_full_path()
-        return f"{type(self).__name__}('{path}', {self.start})"
+        return f"{type(self).__name__}('{path}')"
 
     @staticmethod
     def _init_end_rel(
@@ -606,9 +598,11 @@ class Simulation:
     def __init__(
         self,
         path: PathLike_T,
+        start: Union[pd.Timestamp, YYYYMMDDHH],
         runs: Optional[Sequence[SimulationRun]] = None,
     ) -> None:
         """Create an instance of ``Simulation``."""
+        self.start: pd.Timestamp = init_timestamp(start)
         self._runs: list[SimulationRun] = []
         for run in runs or []:
             self.register_run(run)
@@ -622,10 +616,6 @@ class Simulation:
         """Register a simulation run object and link it to the simulation."""
         self._runs.append(run)
         run.link_simulation(self)
-
-    def get_start(self) -> pd.Timestamp:
-        """Get start of simulation, i.e., earliest run start."""
-        return min([run.start for run in self.get_runs()])
 
     def get_end(self) -> pd.Timestamp:
         """Get end of simulation, i.e., latest run end."""
@@ -654,7 +644,6 @@ class Simulation:
         """Find redundant output files produced by runs of a simulation."""
         if not self.get_runs():
             return {}
-        start = self.get_start()
         multi_steps: dict[OutputStreamType, dict[pd.Timestamp, list[Path]]] = {}
         for stream_type, streams in self.collect_output_streams_by_type().items():
             if stream_type.removed_files:
@@ -673,7 +662,7 @@ class Simulation:
                 for stream in streams:
                     if any(step in interval for interval in stream.intervals):
                         file_path = stream.format_file_path(
-                            step, start=start, check_exists=check_exists
+                            step, start=self.start, check_exists=check_exists
                         )
                         multi_steps[stream_type][step].append(file_path)
         return multi_steps
@@ -703,8 +692,11 @@ class Simulation:
         return False
 
     def __repr__(self) -> str:
-        """Return a string representation."""
-        return f"{type(self).__name__}([" + ", ".join(map(str, self.get_runs())) + "])"
+        return (
+            f"{type(self).__name__}(path={self.path}, start={self.start}, runs=["
+            + ", ".join(map(str, self.get_runs()))
+            + "])"
+        )
 
 
 class Simulations(list[Simulation]):
