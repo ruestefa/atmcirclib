@@ -5,6 +5,7 @@ from __future__ import annotations
 # Standard library
 import dataclasses as dc
 import pkgutil
+import sys
 from collections.abc import Callable
 from collections.abc import Collection
 from collections.abc import Sequence
@@ -677,6 +678,30 @@ class Simulation:
                         multi_steps[stream_type][step].append(file_path)
         return multi_steps
 
+    def contains_run(self, *, path: Optional[PathLike_T] = None) -> bool:
+        """Check if the simulation contains a given run."""
+        if path is not None:
+            path = Path(path).resolve()
+            if not path.exists():
+                raise ValueError(f"path doesn't exist: {path}")
+        for run in self.get_runs():
+            if path is not None:
+                run_path = run.get_full_path().resolve()
+                if not run_path.exists():
+                    print(
+                        "warning [Simulation.contains_run]: skipping run"
+                        f": path doesn't exist: {run_path}",
+                        file=sys.stderr,
+                    )
+                    continue
+                if run_path.samefile(path):
+                    return True
+            else:
+                # Make path implicitly mandatory in preparation for additional
+                # criteria, at least one which would be mandatory
+                raise ValueError("must pass path")
+        return False
+
     def __repr__(self) -> str:
         """Return a string representation."""
         return f"{type(self).__name__}([" + ", ".join(map(str, self.get_runs())) + "])"
@@ -754,6 +779,13 @@ class Simulations(list[Simulation]):
                     for path in paths_sim:
                         paths_sims[-1].append(path)
         return paths_sims
+
+    def contains_run(self, *, path: Optional[PathLike_T] = None) -> bool:
+        """Check if any simulation contains a given run."""
+        for simulation in self:
+            if simulation.contains_run(path=path):
+                return True
+        return False
 
     def __repr__(self) -> str:
         """Return a string representation."""
