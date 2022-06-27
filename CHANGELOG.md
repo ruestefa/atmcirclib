@@ -1,5 +1,12 @@
 # Atmcirclib: Changelog
 
+## v0.5.0 (2022-??-??)
+
+- Hook project back up to copier template python-project-f2py and run copier update
+- Write simulation scanner to find simulation run directories
+- Improve simulations code while working on simulations library in `cosmo-nawdex` repo
+- Add module `plot.rgb` from `cosmo-nawdex` and adapt it
+
 ## v0.4.0 (2022-06-08)
 
 - Improve functions used to drop into pdb in case of exception in `click` module, incl. docstrings
