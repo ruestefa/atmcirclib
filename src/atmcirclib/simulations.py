@@ -433,7 +433,7 @@ class OutputStreams(list[OutputStream]):
                     )
                     raise Exception(
                         f"error creating '{name}' output stream (frequency: {freq})"
-                        f"in interval(s) {intervals} (run start: {start})"
+                        f" in intervals: {intervals} (run start: {start})"
                     ) from e
                 else:
                     streams.append(stream)
