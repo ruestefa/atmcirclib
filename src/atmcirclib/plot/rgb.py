@@ -109,8 +109,8 @@ class RGBPlot:
         arr: npt.NDArray[np.float_],
         data_extent: ExtentT,
         *,
-        pollat: float,
-        pollon: float,
+        pollat: float = 90.0,
+        pollon: float = 0.0,
         dpi: float = 300,
     ) -> None:
         """Create an instance of ``RGBPlot``."""
@@ -132,19 +132,20 @@ class RGBPlot:
 
     def draw(
         self,
-        title: Optional[str] = None,
         extent: Optional[ExtentT] = None,
     ) -> RGBPlot:
         """Draw the plot."""
-        if title is not None:
-            self.ax.set_title(title, fontsize=self.font.large)
         self.ax.coastlines(color="white", resolution="50m", linewidth=0.75)
         self.ax.gridlines(color="white", linewidth=0.75, alpha=0.75)
         self.ax.imshow(self.arr, extent=self.data_extent, transform=self.proj_data)
-        self.ax.set_extent(extent, crs=self.proj_data)
+        self.ax.set_extent(extent or self.data_extent, crs=self.proj_data)
         self.fig.canvas.draw()
         self.add_rgb_legend(n=2, labels_inside=True)
         return self
+
+    def set_title(self, title: str, fontsize: Optional[float] = None) -> None:
+        """Add main title to plot."""
+        self.ax.set_title(title, fontsize=fontsize or self.font.large)
 
     def add_rgb_legend(
         self,
