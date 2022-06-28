@@ -1,6 +1,6 @@
 # Atmcirclib: Changelog
 
-## v0.5.0 (2022-??-??)
+## v0.5.0 (2022-06-28)
 
 - Hook project back up to copier template python-project-f2py and run copier update
 - Write simulation scanner to find simulation run directories

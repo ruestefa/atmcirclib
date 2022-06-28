@@ -1,5 +1,5 @@
 {% set name = "atmcirclib" %}
-{% set version = "0.4.0" %}
+{% set version = "0.5.0" %}
 {% set build = "0" %}
 
 package:
@@ -40,9 +40,9 @@ test:
 
 about:
   license: MIT
-  summary: Python library of Atmospheric Circulation group
+  summary: Python library of the Atmospheric Circulation Group
   description: |
-    # Atmcirclib: Python tools to analyze the atmospheric circulation
+    # AtmCircLib: Python library of the Atmospheric Circulation Group
 
     ## Create new conda release
 
