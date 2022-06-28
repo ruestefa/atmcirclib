@@ -2,9 +2,6 @@
 # Standard library
 import importlib.metadata
 
-# Local
-from . import traj
-
 metadata = importlib.metadata.metadata(__package__)
 
 __author__ = """Stefan Ruedisuehli"""

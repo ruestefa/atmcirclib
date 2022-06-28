@@ -55,17 +55,20 @@ process_requirements_line()
     local line="${1}"
     local env="${2}"
     ${DBG} && echo "DBG line='${line}'" >&2
-    local content="$(echo "${line}" | \sed 's/^\([^#]*[a-zA-Z0-9_-]\)\?\( *#.*\)\?/\1/')"
-    local comment="$(echo "${line}" | \sed 's/^\([^#]*[a-zA-Z0-9_-]\)\?\( *#.*\)\?/\2/')"
-    ${DBG} && echo "DBG content='${content}'" >&2
-    ${DBG} && echo "DBG comment='${comment}'" >&2
-    content=$(echo "${content}" | \sed -s 's/^\([a-zA-Z0-9_-]\+\).*/\1/g')
-    ${DBG} && echo "DBG ${env}" | \grep -- "- ${content}=" >&2
-    echo "${env}" | \grep -q -- "- ${content}="
+    local comment="$(echo "${line}" | \sed 's/^\([^#]*[^ ]\)\?\( *#.*\)\?$/\2/')"
+    local content="${line%${comment}}"
+    local package="$(echo "${content}" | \sed 's/^ *\([a-zA-Z0-9_-]\+\).*/\1/')"
+    ${DBG} && echo "DBG -> content='${content}'" >&2
+    ${DBG} && echo "DBG -> package='${package}'" >&2
+    ${DBG} && echo "DBG -> comment='${comment}'" >&2
+    ${DBG} && echo "DBG -> grep: '$(echo "${env}" | \grep -- "- ${package}=")'" >&2
+    echo "${env}" | \grep -qi -- "- ${package}="
     if [[ "${?}" -eq 0 ]]; then
         local rx='s/ *- \([^=]\+\)=\([0-9]\+\(\.[0-9]\+\)\?\).*/\1>=\2/'
-        content="$(echo "${env}" | \grep -- "- ${content}=" | \sed "${rx}")"
+        content="$(echo "${env}" | \grep -i -- "- ${package}=" | \sed "${rx}")"
     fi
+    ${DBG} && echo "DBG -> content='${content}'" >&2
+    ${DBG} && echo "DBG -> new_line='${content}${comment}'" >&2
     echo "${content}${comment}"
 }
 
