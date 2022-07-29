@@ -1,5 +1,9 @@
 # Atmcirclib: Changelog
 
+## v0.6.0 (2022-??-??)
+
+- Add function click_set_pdb_raise to atmcirclib.click
+
 ## v0.5.0 (2022-06-28)
 
 - Hook project back up to copier template python-project-f2py and run copier update
