@@ -193,6 +193,15 @@ def click_set_raise(ctx: Context, param: Option, value: Any) -> None:
         ctx.obj["raise"] = value
 
 
+def click_set_pdb_raise(ctx: click.Context, param: click.Option, value: Any) -> None:
+    """Set argument ``"pdb"`` in click options."""
+    # pylint: disable=W0613  # unused-argument (param)
+    assert param.name == "pdb"
+    click_set_ctx_obj(ctx, param, value)
+    if value:
+        ctx.obj["raise"] = True
+
+
 def click_set_verbosity(ctx: Context, param: Option, value: Any) -> None:
     """Set argument ``"verbosity"`` in click options."""
     # pylint: disable=W0613  # unused-argument (ctx, param)
