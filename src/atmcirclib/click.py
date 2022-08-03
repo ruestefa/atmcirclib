@@ -11,6 +11,7 @@ from typing import Callable
 from typing import cast
 from typing import NoReturn
 from typing import Optional
+from typing import overload
 from typing import Type
 from typing import TypeVar
 from typing import Union
@@ -248,6 +249,70 @@ def pdb_wrap(fct: Callable[P, T]) -> Callable[P, T]:
             sys.exit(1)
 
     return wrapper
+
+
+P1 = ParamSpec("P1")
+P2 = ParamSpec("P2")
+T1 = TypeVar("T1")
+T2 = TypeVar("T2")
+
+
+@overload
+def click_add_option_pdb(fct: Callable[P1, T1], /) -> Callable[P1, T1]:
+    ...
+
+
+@overload
+def click_add_option_pdb(
+    option_name: Optional[str] = None,
+    /,
+    **option_kwargs: Any,
+) -> Callable[[Callable[P2, T2]], Callable[P2, T2]]:
+    ...
+
+
+def click_add_option_pdb(
+    fct_or_option_name: Optional[Union[Callable[P1, T1], str]] = None,
+    /,
+    **option_kwargs: Any,
+) -> Union[Callable[P1, T1], Callable[[Callable[P2, T2]], Callable[P2, T2]]]:
+    """Add click option ``--pdb`` to a function by decorating it."""
+    default_option_name = "--pdb/--no-pdb"
+    default_option_kwargs: dict[str, Any] = dict(
+        help="Drop into debugger when an exception is raised.",
+        callback=click_set_ctx_obj,
+        is_eager=True,
+        expose_value=False,
+    )
+
+    if callable(fct_or_option_name):
+        # Case 1: Plain decorator (``@click_add_option_pdb``)
+        fct = fct_or_option_name
+        click.option(default_option_name, **default_option_kwargs)(fct)
+
+        @wraps(fct)
+        def wrapped1(*args: P1.args, **kwargs: P1.kwargs) -> T1:
+            """Wrap function ``fct``."""
+            return fct(*args, **kwargs)
+
+        return wrapped1
+
+    # Case 2: Called decorator (``@click_add_option_pdb(...)``)
+    option_name = fct_or_option_name or default_option_name
+    option_kwargs = {**default_option_kwargs, **option_kwargs}
+
+    def inner2(fct: Callable[P2, T2]) -> Callable[P2, T2]:
+        """Decorate function ``fct``."""
+        click.option(option_name, **option_kwargs)(fct)
+
+        @wraps(fct)
+        def wrapped2(*args: P2.args, **kwargs: P2.kwargs) -> T2:
+            """Wrap function ``fct``."""
+            return fct(*args, **kwargs)
+
+        return wrapped2
+
+    return inner2
 
 
 def set_log_level(verbosity: int) -> None:
