@@ -12,12 +12,14 @@ from typing import cast
 from typing import NoReturn
 from typing import Optional
 from typing import Type
+from typing import TypeVar
 from typing import Union
 
 # Third-party
 import click
 from click import Context
 from click import Option
+from typing_extensions import ParamSpec
 
 CONTEXT_SETTINGS = {
     "show_default": True,
@@ -223,11 +225,15 @@ def pdb_wrap_callback(fct: Callable[..., Any]) -> Callable[..., Any]:
     return wrapper
 
 
-def pdb_wrap(fct: Callable[..., Any]) -> Callable[..., Any]:
+P = ParamSpec("P")
+T = TypeVar("T")
+
+
+def pdb_wrap(fct: Callable[P, T]) -> Callable[P, T]:
     """Decorate a function to drop into ipdb if an exception is raised."""
 
     @wraps(fct)
-    def wrapper(*args: Any, **kwargs: Any) -> Any:
+    def wrapper(*args: P.args, **kwargs: P.kwargs) -> T:
         """Drop into ``ipdb`` session if ``fct`` call raises an exception."""
         try:
             return fct(*args, **kwargs)
