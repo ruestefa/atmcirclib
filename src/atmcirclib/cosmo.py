@@ -3,7 +3,6 @@ from __future__ import annotations
 
 # Standard library
 from typing import Any
-from typing import cast
 from typing import TYPE_CHECKING
 
 # Third-party
@@ -85,7 +84,7 @@ class COSMOGridDataset:
         """Create an instance from a NetCDF file."""
         # mypy thinks return type is Any (mypy v0.941, numpy v1.22.3)
         try:
-            ds: xr.Dataset = cast(xr.Dataset, xr.open_dataset(path, engine="h5netcdf"))
+            ds: xr.Dataset = xr.open_dataset(path, engine="h5netcdf")
         except (IOError, TypeError) as e:
             raise Exception(f"error reading cosmo grid file '{path}'") from e
         return cls(ds, **kwargs)
