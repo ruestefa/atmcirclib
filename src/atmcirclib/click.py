@@ -22,6 +22,14 @@ from click import Context
 from click import Option
 from typing_extensions import ParamSpec
 
+P = ParamSpec("P")
+P1 = ParamSpec("P1")
+P2 = ParamSpec("P2")
+
+T = TypeVar("T")
+T1 = TypeVar("T1")
+T2 = TypeVar("T2")
+
 CONTEXT_SETTINGS = {
     "show_default": True,
     "help_option_names": ["-h", "--help"],
@@ -226,10 +234,6 @@ def pdb_wrap_callback(fct: Callable[..., Any]) -> Callable[..., Any]:
     return wrapper
 
 
-P = ParamSpec("P")
-T = TypeVar("T")
-
-
 def pdb_wrap(fct: Callable[P, T]) -> Callable[P, T]:
     """Decorate a function to drop into ipdb if an exception is raised."""
 
@@ -249,12 +253,6 @@ def pdb_wrap(fct: Callable[P, T]) -> Callable[P, T]:
             sys.exit(1)
 
     return wrapper
-
-
-P1 = ParamSpec("P1")
-P2 = ParamSpec("P2")
-T1 = TypeVar("T1")
-T2 = TypeVar("T2")
 
 
 @overload
@@ -313,6 +311,34 @@ def click_add_option_pdb(
         return wrapped2
 
     return inner2
+
+
+def click_wrap_pdb(fct: Callable[P, T]) -> Callable[P, T]:
+    """Decorate a click command function to wrap it with ``pdb_wrap``.
+
+    Whether the function is wrapped -- in which case the program drops into the
+    pdb or ipdb debugger when an exception is raised -- depends on the click
+    context, specifically the flag ``ctx.obj['pdb']`` which must be defined.
+
+    """
+    name = "pdb"  # SR/TMP TODO move to interface
+
+    @wraps(fct)
+    def wrapped(*args: P.args, **kwargs: P.kwargs) -> T:
+        @click.pass_context
+        def get_pdb(ctx: click.Context) -> bool:
+            """Get pdb from context."""
+            try:
+                return bool(ctx.obj[name])
+            except KeyError as e:
+                raise ValueError(f"ctx.obj does not contain pdb key: {name}") from e
+
+        # mypy/0.971 complains about missing positional argument "ctx", which is
+        # provided by ``@click.pass_context``
+        pdb = get_pdb()  # type: ignore
+        return (pdb_wrap(fct) if pdb else fct)(*args, **kwargs)
+
+    return wrapped
 
 
 def set_log_level(verbosity: int) -> None:
