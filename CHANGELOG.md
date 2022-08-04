@@ -4,7 +4,7 @@
 
 - Add callback function `click_set_pdb_raise` to `atmcirclib.click`
 - Add decorator function `click_add_option_pdb` to `atmcirclib.click` to add `--pdb` option with one line
-- Add decorator function `click_wrap_pdb` to wrap click command function in `wrap_pdb`
+- Add decorator function `click_wrap_pdb` to wrap click command function in `wrap_pdb` with option to call `click_add_option_pdb` internally, making the addition of `--pdb` a (potential) one-liner
 - Update conda environments
 - Update to copier template
 
