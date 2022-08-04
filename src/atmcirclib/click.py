@@ -313,32 +313,67 @@ def click_add_option_pdb(
         return inner2
 
 
-def click_wrap_pdb(fct: Callable[P, T]) -> Callable[P, T]:
+@overload
+def click_wrap_pdb(fct: Callable[P1, T1], /) -> Callable[P1, T1]:
+    ...
+
+
+@overload
+def click_wrap_pdb(
+    name: Optional[str] = None,
+    /,
+    **option_kwargs: Any,
+) -> Callable[[Callable[P2, T2]], Callable[P2, T2]]:
+    ...
+
+
+def click_wrap_pdb(
+    fct_or_name: Optional[Union[Callable[P1, T1], str]] = None,
+    /,
+    **option_kwargs: Any,
+) -> Union[Callable[P1, T1], Callable[[Callable[P2, T2]], Callable[P2, T2]]]:
     """Decorate a click command function to wrap it with ``pdb_wrap``.
 
     Whether the function is wrapped -- in which case the program drops into the
     pdb or ipdb debugger when an exception is raised -- depends on the click
-    context, specifically the flag ``ctx.obj['pdb']`` which must be defined.
+    context, specifically the flag ``ctx.obj[name]`` which must be defined.
 
     """
-    name = "pdb"  # SR/TMP TODO move to interface
 
-    @wraps(fct)
-    def wrapped(*args: P.args, **kwargs: P.kwargs) -> T:
-        @click.pass_context
-        def get_pdb(ctx: click.Context) -> bool:
-            """Get pdb from context."""
-            try:
-                return bool(ctx.obj[name])
-            except KeyError as e:
-                raise ValueError(f"ctx.obj does not contain pdb key: {name}") from e
+    def wrap_fct(fct: Callable[P, T], name: str) -> Callable[P, T]:
+        """Wrap function ``fct``."""
 
-        # mypy/0.971 complains about missing positional argument "ctx", which is
-        # provided by ``@click.pass_context``
-        pdb = get_pdb()  # type: ignore
-        return (pdb_wrap(fct) if pdb else fct)(*args, **kwargs)
+        @wraps(fct)
+        def wrapped(*args: P.args, **kwargs: P.kwargs) -> T:
+            """Wrap function ``fct``."""
 
-    return wrapped
+            @click.pass_context
+            def get_pdb(ctx: click.Context) -> bool:
+                """Get pdb switch from click context."""
+                try:
+                    return bool(ctx.obj[name])
+                except KeyError as e:
+                    raise ValueError(f"ctx.obj does not contain pdb key: {name}") from e
+
+            # mypy/0.971 complains about missing positional argument "ctx", which is
+            # provided by ``@click.pass_context``
+            pdb = get_pdb()  # type: ignore
+            return (pdb_wrap(fct) if pdb else fct)(*args, **kwargs)
+
+        return wrapped
+
+    default_name = "pdb"
+    if callable(fct_or_name):
+        # Case 1: Decorator not called (``@click_wrap_pdb``)
+        return wrap_fct(fct=fct_or_name, name=default_name)
+    else:
+        # Case 2: Decorator called (``@click_wrap_pdb(...)``)
+        def inner(fct: Callable[P, T]) -> Callable[P, T]:
+            """Decorate function ``fct``."""
+            name = cast(str, default_name if fct_or_name is None else fct_or_name)
+            return wrap_fct(fct=fct, name=name)
+
+        return inner
 
 
 def set_log_level(verbosity: int) -> None:
