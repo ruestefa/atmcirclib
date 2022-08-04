@@ -256,37 +256,46 @@ def pdb_wrap(fct: Callable[P, T]) -> Callable[P, T]:
 
 
 @overload
-def click_add_option_pdb(fct: Callable[P1, T1], /) -> Callable[P1, T1]:
+def click_add_option_pdb(
+    fct: Callable[P1, T1],
+    /,
+) -> Callable[P1, T1]:
     ...
 
 
 @overload
 def click_add_option_pdb(
-    option_name: Optional[str] = None,
+    name: Optional[str] = None,
     /,
+    flag: Optional[str] = None,
     **option_kwargs: Any,
 ) -> Callable[[Callable[P2, T2]], Callable[P2, T2]]:
     ...
 
 
 def click_add_option_pdb(
-    fct_or_option_name: Optional[Union[Callable[P1, T1], str]] = None,
+    fct_or_name: Optional[Union[Callable[P1, T1], str]] = None,
     /,
+    flag: Optional[str] = None,
     **option_kwargs: Any,
 ) -> Union[Callable[P1, T1], Callable[[Callable[P2, T2]], Callable[P2, T2]]]:
     """Add click option ``--pdb`` to a function by decorating it."""
-    default_option_name = "--pdb/--no-pdb"
+    default_name = "pdb"
     default_option_kwargs: dict[str, Any] = dict(
         help="Drop into debugger when an exception is raised.",
-        callback=click_set_ctx_obj,
+        is_flag=True,
+        default=False,
         is_eager=True,
         expose_value=False,
+        callback=click_set_ctx_obj,
     )
 
-    if callable(fct_or_option_name):
+    if callable(fct_or_name):
         # Case 1: Decorator not called (``@click_add_option_pdb``)
-        fct = fct_or_option_name
-        click.option(default_option_name, **default_option_kwargs)(fct)
+        fct = fct_or_name
+        name = default_name
+        flag = f"--{name}/--no-{name}"
+        click.option(flag, name, **default_option_kwargs)(fct)
 
         @wraps(fct)
         def wrapped1(*args: P1.args, **kwargs: P1.kwargs) -> T1:
@@ -296,12 +305,14 @@ def click_add_option_pdb(
         return wrapped1
     else:
         # Case 2: Decorator called (``@click_add_option_pdb(...)``)
-        option_name = fct_or_option_name or default_option_name
+        name = fct_or_name or default_name
+        if flag is None:
+            flag = f"--{name}/--no-{name}"
         option_kwargs = {**default_option_kwargs, **option_kwargs}
 
         def inner2(fct: Callable[P2, T2]) -> Callable[P2, T2]:
             """Decorate function ``fct``."""
-            click.option(option_name, **option_kwargs)(fct)
+            click.option(cast(str, flag), name, **option_kwargs)(fct)
 
             @wraps(fct)
             def wrapped2(*args: P2.args, **kwargs: P2.kwargs) -> T2:
