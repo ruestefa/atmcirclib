@@ -333,8 +333,9 @@ def click_wrap_pdb(fct: Callable[P1, T1], /) -> Callable[P1, T1]:
 
 @overload
 def click_wrap_pdb(
-    name: Optional[str] = None,
+    name: Optional[str] = ...,
     /,
+    add_option: bool = ...,
     **option_kwargs: Any,
 ) -> Callable[[Callable[P2, T2]], Callable[P2, T2]]:
     ...
@@ -343,6 +344,7 @@ def click_wrap_pdb(
 def click_wrap_pdb(
     fct_or_name: Optional[Union[Callable[P1, T1], str]] = None,
     /,
+    add_option: bool = False,
     **option_kwargs: Any,
 ) -> Union[Callable[P1, T1], Callable[[Callable[P2, T2]], Callable[P2, T2]]]:
     """Decorate a click command function to wrap it with ``pdb_wrap``.
@@ -352,25 +354,30 @@ def click_wrap_pdb(
     context, specifically the flag ``ctx.obj[name]`` which must be defined.
 
     """
+    if not add_option and option_kwargs:
+        raise ValueError(
+            f"passed option_kwargs despite add_option=False: {option_kwargs}"
+        )
+
+    @click.pass_context
+    def get_pdb(ctx: click.Context, name: str) -> bool:
+        """Get pdb switch from click context."""
+        try:
+            return bool(ctx.obj[name])
+        except KeyError as e:
+            raise ValueError(f"ctx.obj does not contain pdb key: {name}") from e
 
     def wrap_fct(fct: Callable[P, T], name: str) -> Callable[P, T]:
         """Wrap function ``fct``."""
+        if add_option:
+            fct = click_add_option_pdb(name, **option_kwargs)(fct)
 
         @wraps(fct)
         def wrapped(*args: P.args, **kwargs: P.kwargs) -> T:
             """Wrap function ``fct``."""
-
-            @click.pass_context
-            def get_pdb(ctx: click.Context) -> bool:
-                """Get pdb switch from click context."""
-                try:
-                    return bool(ctx.obj[name])
-                except KeyError as e:
-                    raise ValueError(f"ctx.obj does not contain pdb key: {name}") from e
-
             # mypy/0.971 complains about missing positional argument "ctx", which is
             # provided by ``@click.pass_context``
-            pdb = get_pdb()  # type: ignore
+            pdb = get_pdb(name)  # type: ignore
             return (pdb_wrap(fct) if pdb else fct)(*args, **kwargs)
 
         return wrapped
