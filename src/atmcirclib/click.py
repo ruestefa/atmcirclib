@@ -284,7 +284,7 @@ def click_add_option_pdb(
     )
 
     if callable(fct_or_option_name):
-        # Case 1: Plain decorator (``@click_add_option_pdb``)
+        # Case 1: Decorator not called (``@click_add_option_pdb``)
         fct = fct_or_option_name
         click.option(default_option_name, **default_option_kwargs)(fct)
 
@@ -294,23 +294,23 @@ def click_add_option_pdb(
             return fct(*args, **kwargs)
 
         return wrapped1
+    else:
+        # Case 2: Decorator called (``@click_add_option_pdb(...)``)
+        option_name = fct_or_option_name or default_option_name
+        option_kwargs = {**default_option_kwargs, **option_kwargs}
 
-    # Case 2: Called decorator (``@click_add_option_pdb(...)``)
-    option_name = fct_or_option_name or default_option_name
-    option_kwargs = {**default_option_kwargs, **option_kwargs}
+        def inner2(fct: Callable[P2, T2]) -> Callable[P2, T2]:
+            """Decorate function ``fct``."""
+            click.option(option_name, **option_kwargs)(fct)
 
-    def inner2(fct: Callable[P2, T2]) -> Callable[P2, T2]:
-        """Decorate function ``fct``."""
-        click.option(option_name, **option_kwargs)(fct)
+            @wraps(fct)
+            def wrapped2(*args: P2.args, **kwargs: P2.kwargs) -> T2:
+                """Wrap function ``fct``."""
+                return fct(*args, **kwargs)
 
-        @wraps(fct)
-        def wrapped2(*args: P2.args, **kwargs: P2.kwargs) -> T2:
-            """Wrap function ``fct``."""
-            return fct(*args, **kwargs)
+            return wrapped2
 
-        return wrapped2
-
-    return inner2
+        return inner2
 
 
 def click_wrap_pdb(fct: Callable[P, T]) -> Callable[P, T]:
