@@ -5,6 +5,7 @@
 - Add callback function click_set_pdb_raise to atmcirclib.click
 - Add decorator function click_add_option_pdb to atmcirclib.click to add --pdb option with one line
 - Update conda environments
+- Update to copier template
 
 ## v0.5.0 (2022-06-28)
 
