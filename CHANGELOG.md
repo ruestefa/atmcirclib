@@ -1,6 +1,6 @@
 # Atmcirclib: Changelog
 
-## v0.6.0 (2022-??-??)
+## v0.6.0 (2022-08-29)
 
 - Add callback function `click_set_pdb_raise` to `atmcirclib.click`
 - Add decorator function `click_add_option_pdb` to `atmcirclib.click` to add `--pdb` option with one line
