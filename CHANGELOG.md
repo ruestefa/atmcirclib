@@ -1,5 +1,10 @@
 # Atmcirclib: Changelog
 
+## v0.7.0 (2022-??-??)
+
+- Add module `atmcirclib.typer` with decorator `typer_wrap_pdb` (analogue to `atmcirclib.click.click_wrap_pdb`)
+- ...
+
 ## v0.6.0 (2022-08-29)
 
 - Add callback function `click_set_pdb_raise` to `atmcirclib.click`
