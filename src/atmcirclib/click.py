@@ -246,7 +246,12 @@ def pdb_wrap(fct: Callable[P, T]) -> Callable[P, T]:
             if isinstance(e, click.exceptions.Exit):
                 if e.exit_code == 0:  # pylint: disable=E1101  # no-member
                     sys.exit(0)
-            pdb = __import__("ipdb")  # trick pre-commit hook "debug-statements"
+            # Use __import__ to trick pre-commit hook "debug-statements" that
+            # would flag a regular import of [i]pdb
+            try:
+                pdb = __import__("ipdb")
+            except ModuleNotFoundError:
+                pdb = __import__("pdb")
             traceback.print_exc()
             click.echo()
             pdb.post_mortem()
