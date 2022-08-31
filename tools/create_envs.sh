@@ -99,9 +99,9 @@ create_new_env()
     shift 2
     local reqs_files=("${@}")
     if ${UPDATE}; then
-        recreate_env "${env_name}" "${env_file}" || return
-    else
         create_updated_env "${env_name}" "${env_file}" "${reqs_files[@]}" || return
+    else
+        recreate_env "${env_name}" "${env_file}" || return
     fi
 }
 
