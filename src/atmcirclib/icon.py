@@ -2,12 +2,17 @@
 from __future__ import annotations
 
 # Standard library
+import datetime as dt
 from pathlib import Path
+
+# Third-party
+import xarray as xr
 
 # First-party
 from atmcirclib.fortran.namelist_parser import flatten_groups
 from atmcirclib.fortran.namelist_parser import parse_namelist_file
 from atmcirclib.utils import partial_format
+from atmcirclib.utils import rint
 
 
 def format_icon_params(
@@ -51,3 +56,26 @@ def format_icon_params(
     if partial:
         return partial_format(title_tmpl, **vars_fmtd)
     return title_tmpl.format(**vars_fmtd)
+
+
+def convert_icon_time_step(
+    time: xr.DataArray,
+) -> dt.datetime:
+    """Convert a time step from ICON format to a datetime object."""
+    assert time.shape == (), f"unexpected time shape: {time.shape}"
+    assert "%Y%m%d.%f" in time.units, f"unexpected time units: {time.units}"
+    year = int(time / 1e4)
+    month = int(((int(time) / 1e4) % 1) * 1e2)
+    day = int(((int(time) / 1e2) % 1) * 1e2)
+    tot_secs = rint((float(time) % 1) * 24 * 3600)
+    hour = int(tot_secs / 3600)
+    min_ = int((tot_secs % 3600) / 60)
+    sec = tot_secs % 3600 % 60
+    return dt.datetime(year, month, day, hour, min_, sec)
+
+
+def convert_icon_time(time: xr.DataArray) -> xr.DataArray:
+    """Convert time steps from ICON format to datetime objects."""
+    return xr.DataArray(
+        data=list(map(convert_icon_time_step, time)), coords={"time": time}
+    )

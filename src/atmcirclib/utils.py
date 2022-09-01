@@ -7,6 +7,10 @@ import sys
 from functools import wraps
 from typing import Any
 from typing import Callable
+from typing import Union
+
+# Third-party
+import xarray as xr
 
 
 def partial_format(s: str, max_try: int = 99, /, **keys: Any) -> str:
@@ -48,3 +52,8 @@ def exception_as_error(
             exit_(1)
 
     return wrapped
+
+
+def rint(f: Union[float, xr.DataArray]) -> int:
+    """Convert float into nearest int."""
+    return int(round(float(f)))
