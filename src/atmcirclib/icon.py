@@ -31,8 +31,8 @@ def find_namelist_path(
 
         master (optional): File name of master namelist.
 
-        param (optional): Name of master namelist parameter containing
-            the name of the file name of the full namelist.
+        param (optional): Name of master namelist parameter containing the name
+            of the file name of the full namelist.
 
     """
     dir = Path(dir)
