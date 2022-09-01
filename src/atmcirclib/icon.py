@@ -3,7 +3,9 @@ from __future__ import annotations
 
 # Standard library
 import datetime as dt
+import re
 from pathlib import Path
+from typing import Union
 
 # Third-party
 import xarray as xr
@@ -13,6 +15,40 @@ from atmcirclib.fortran.namelist_parser import flatten_groups
 from atmcirclib.fortran.namelist_parser import parse_namelist_file
 from atmcirclib.utils import partial_format
 from atmcirclib.utils import rint
+
+PathLike_T = Union[Path, str]
+
+
+def find_namelist_path(
+    dir: PathLike_T,
+    master: str = "icon_master.namelist",
+    param: str = "model_namelist_filename",
+) -> Path:
+    """Obtain path to full namelist of ICON run by parsing master namelist.
+
+    Arguments:
+        dir: Path to ICON run directory.
+
+        master (optional): File name of master namelist.
+
+        param (optional): Name of master namelist parameter containing
+            the name of the file name of the full namelist.
+
+    """
+    dir = Path(dir)
+    master_path = dir / master
+    rx = re.compile(r"^\s*" + param + r'\s*=\s*"(?P<name>[^"]+)"')
+    with open(master_path, "r") as f:
+        for line in f.readlines():
+            if m := rx.match(line):
+                namelist_name = m.group("name")
+                break
+        else:
+            raise Exception(
+                "param not found in namelist file with regex"
+                f"\n{param=}\n{master_path=}\n{rx.pattern=}"
+            )
+    return dir / namelist_name
 
 
 def format_icon_params(

@@ -3,8 +3,11 @@
 ## v0.7.0 (2022-??-??)
 
 - Add module `atmcirclib.typer` with decorator `typer_wrap_pdb` (analogue to `atmcirclib.click.click_wrap_pdb`) and some additional conveniences
-- Add subpackage `atmcirclib.fortran` with Fortran namelist parser (functions `parse_namelist[_file]`)
-- Add module `atmcirclib.icon` with function `format_icon_params` to format string with keys corresponding to ICON namelist params
+- Add subpackage `atmcirclib.fortran` with Fortran namelist parser with `parse_namelist` and `parse_namelist_file`
+- Add module `atmcirclib.icon` with various utilities
+  - Find path to full namelist by parsing master namelist file in ICON run directory with `find_namelist_path`
+  - Insert ICON namelist params in format string templates with `format_icon_params`
+  - Convert time steps from ICON format to regular datetime objects with `convert_icon_time_step` and `convert_icon_time`
 
 ## v0.6.0 (2022-08-29)
 
