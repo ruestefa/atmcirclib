@@ -144,20 +144,22 @@ def convert_icon_time(time: xr.DataArray) -> xr.DataArray:
     )
 
 
-def convert_xr_time(time_: xr.DataArray) -> list[dt.datetime]:
+def convert_xr_time(time_: Union[xr.DataArray, xr.Variable]) -> list[dt.datetime]:
     """Convert an xarray time array to a list of datetime objects."""
     return [ts.astype("datetime64[s]").astype(dt.datetime) for ts in time_.data]
 
 
 def disaggr_tot_precip(tot_prec: xr.DataArray) -> xr.DataArray:
     """Disaggregate total precipitation into 'instantaneous' precipitation."""
-    prec = tot_prec.copy()
+    prec: xr.DataArray = tot_prec.copy()
     prec.data[1:] = prec.data[1:] - prec.data[:-1]
     prec.attrs["units"] = deriv_precip_intensity_units(tot_prec)
     return prec
 
 
-def deriv_precip_intensity_units(tot_prec: xr.DataArray, time_unit: str = "s") -> str:
+def deriv_precip_intensity_units(
+    tot_prec: Union[xr.DataArray], time_unit: str = "s"
+) -> str:
     """Derive the units of precipitation intensity from total precipitation.
 
     Example: For ICON output written with a frequency of 10 min containing
@@ -172,8 +174,7 @@ def deriv_precip_intensity_units(tot_prec: xr.DataArray, time_unit: str = "s") -
         raise ValueError(f"unexpected standard name (choices: {cs}): '{u}'")
     if (d := "time") not in (ds := tot_prec.dims):
         raise ValueError(f"unexpected dimensions (missing '{d}'): {ds}")
-    time_abs: xr.DataArray = convert_icon_time(tot_prec.time)
-    steps: list[dt.datetime] = convert_xr_time(time_abs)
+    steps: list[dt.datetime] = convert_xr_time(convert_icon_time(tot_prec.time))
     deltas = [steps[i + 1] - t for i, t in enumerate(steps[:-1])]
     delta = deltas[0]
     if not all(d == delta for d in deltas):
