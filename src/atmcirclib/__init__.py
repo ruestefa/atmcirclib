@@ -2,6 +2,19 @@
 # Standard library
 import importlib.metadata
 
+# Local
+from . import click
+from . import cosmo
+from . import deriv
+from . import geo
+from . import intp
+from . import plot
+from . import simulations
+from . import traj
+from . import typer
+from . import typing
+from . import utils
+
 metadata = importlib.metadata.metadata(__package__)
 
 __author__ = "Stefan Ruedisuehli"
