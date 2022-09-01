@@ -9,8 +9,13 @@ from typing import Any
 from typing import Callable
 
 
-def partial_format(s: str, *, max_try: int = 99, **keys: Any) -> str:
+def partial_format(s: str, max_try: int = 99, /, **keys: Any) -> str:
     """Format ``s``, leaving format specifiers not in ``keys`` as they are."""
+    # Note: s and max_try are positional-only to allow max_try to be omitted
+    # when passing keys as `d: dict[str, str] = {...}; partial_format(s, **d)`
+    # (otherwise mypy has to assume that max_try may be in the dict, so the dict
+    # values must have a type compatible with int, e.g., Any; see also
+    # https://github.com/python/mypy/issues/8038)
     for _ in range(max_try):
         try:
             return s.format(**keys)
