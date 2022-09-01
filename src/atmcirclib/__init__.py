@@ -6,7 +6,9 @@ import importlib.metadata
 from . import click
 from . import cosmo
 from . import deriv
+from . import fortran
 from . import geo
+from . import icon
 from . import intp
 from . import plot
 from . import simulations

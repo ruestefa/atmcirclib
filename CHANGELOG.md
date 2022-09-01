@@ -3,7 +3,8 @@
 ## v0.7.0 (2022-??-??)
 
 - Add module `atmcirclib.typer` with decorator `typer_wrap_pdb` (analogue to `atmcirclib.click.click_wrap_pdb`) and some additional conveniences
-- ...
+- Add subpackage `atmcirclib.fortran` with Fortran namelist parser (functions `parse_namelist[_file]`)
+- Add module `atmcirclib.icon` with function `format_icon_params` to format string with keys corresponding to ICON namelist params
 
 ## v0.6.0 (2022-08-29)
 
