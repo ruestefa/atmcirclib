@@ -8,6 +8,7 @@
   - Find path to full namelist by parsing master namelist file in ICON run directory with `find_namelist_path`
   - Insert ICON namelist params in format string templates with `format_icon_params`
   - Convert time steps from ICON format to regular datetime objects with `convert_icon_time_step` and `convert_icon_time`
+  - Disaggregate total precip with `disaggr_tot_precip` and derive precipitation intensity units with `deriv_precip_intensity_units`
 - Fix `tools/create_envs.sh` (`${UPDATE}` implemented wrong)
   - TODO: Merge back to copier template and perform copier update
 
