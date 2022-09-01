@@ -3,6 +3,7 @@ from __future__ import annotations
 
 # Standard library
 from functools import wraps
+from typing import Any
 from typing import Callable
 from typing import cast
 from typing import Optional
@@ -11,6 +12,7 @@ from typing import TypeVar
 from typing import Union
 
 # Third-party
+import typer
 from typing_extensions import ParamSpec
 
 # First-party
@@ -23,6 +25,33 @@ P2 = ParamSpec("P2")
 T = TypeVar("T")
 T1 = TypeVar("T1")
 T2 = TypeVar("T2")
+
+CONTEXT_SETTINGS = {
+    "help_option_names": ["-h", "--help"],
+}
+
+
+def create_typer(*args: Any, **kwargs: Any) -> typer.Typer:
+    """Create instance of ``typer.Typer`` with adapted defaults."""
+    kwargs = {
+        "add_completion": False,
+        "context_settings": CONTEXT_SETTINGS,
+        **kwargs,
+    }
+    return typer.Typer(*args, **kwargs)
+
+
+def typer_option_pdb(
+    default: bool = False,
+    flag: str = "--pdb/--no-pdb",
+    /,
+    *,
+    help: str = "Drop into debugger when an exception is raised.",
+    is_eager: bool = True,
+    **kwargs: Any,
+) -> Any:
+    """Create a typer option for a ``--pdb`` option."""
+    return typer.Option(default, flag, help=help, is_eager=is_eager, **kwargs)
 
 
 @overload

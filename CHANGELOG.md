@@ -2,7 +2,7 @@
 
 ## v0.7.0 (2022-??-??)
 
-- Add module `atmcirclib.typer` with decorator `typer_wrap_pdb` (analogue to `atmcirclib.click.click_wrap_pdb`)
+- Add module `atmcirclib.typer` with decorator `typer_wrap_pdb` (analogue to `atmcirclib.click.click_wrap_pdb`) and some additional conveniences
 - ...
 
 ## v0.6.0 (2022-08-29)
