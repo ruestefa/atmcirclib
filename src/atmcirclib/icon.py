@@ -52,22 +52,27 @@ def find_namelist_path(
 
 
 def format_icon_params(
+    s: str,
+    /,
+    path: PathLike_T,
     *,
-    namelist_path: Path,
-    title_tmpl: str,
     partial: bool = True,
 ) -> str:
     """Format template string by inserting ICON namelist parameters.
 
-    Variables can be included with Python-style format keys: ``{<var>[:...]}``.
+    Arguments:
+        s: Format string with '{...}'-style keys; insert ICON namelist parameters
+            with '{nl__<param>[:...]}', e.g., ``{nl__dtime:02d}``; may contain
+            other format keys if ``partial`` is true, in which case those are
+            ignored; for details on multi-value parameters and parameter groups,
+            see below.
 
-    The following regular variables are supported:
-        'abs_step': Absolute time step.
+        path: Path to an ICON namelist file or an ICON run directory; if the
+            latter, the path to the full namelist file is obtained with
+            ``find_namelist_path``.
 
-        'rel_step': Time step relative to the start of the simulation.
-
-    In addition, any ICON namelist parameters can be included by prefacing their
-    name with 'nl__', e.g., 'nl__dtime' to include the model time step 'dtime'.
+        partial (optional): Ignore format keys of non-ICON parameters; if false,
+            such keys will trigger an exception.
 
     If a parameter contains multiple values (e.g., output variables or in case
     of nested domains), or if a parameter is passed multiple times in successive
@@ -75,10 +80,16 @@ def format_icon_params(
     concatenated in order of appearance. (Support for such multi-value
     parameters is rudimentary at this point.)
 
-    If ``partial`` is true, additional, non-ICON format parameters are ignored.
-    Set it to false to ensure that no such keys are present.
-
     """
+    path = Path(path)
+    if path.is_file():
+        namelist_path = path
+    elif path.is_dir():
+        namelist_path = find_namelist_path(path)
+    else:
+        raise ValueError(
+            f"path neither points to a namelist file nor a run directory: {path}"
+        )
     grouped_vars = parse_namelist_file(namelist_path)
     # Collect all variables across groups, assuming (and checking) that all
     # variable names are unique across groups (if they weren't, the group
@@ -90,8 +101,8 @@ def format_icon_params(
         vals_fmtd = [f"'{v}'" if isinstance(v, str) else str(v) for v in vals]
         vars_fmtd[f"nl__{name}"] = ",".join(vals_fmtd)
     if partial:
-        return partial_format(title_tmpl, **vars_fmtd)
-    return title_tmpl.format(**vars_fmtd)
+        return partial_format(s, **vars_fmtd)
+    return s.format(**vars_fmtd)
 
 
 def convert_icon_time_step(
