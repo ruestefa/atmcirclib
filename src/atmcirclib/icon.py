@@ -98,8 +98,24 @@ def format_icon_params(
     vars = flatten_groups(grouped_vars, check_unique_vars=True)
     vars_fmtd: dict[str, str] = {}
     for name, vals in vars.items():
-        vals_fmtd = [f"'{v}'" if isinstance(v, str) else str(v) for v in vals]
-        vars_fmtd[f"nl__{name}"] = ",".join(vals_fmtd)
+        key = f"nl__{name}"
+        # Note: Formatting of values is very rudimentary, especially for
+        # multi-value parameters where individual values cannot be formatted
+        # (e.g., no. decimal digits or so); this should be refined as need
+        # arises (but it's good enough for simple use cases)
+        if len(vals) == 1 and not isinstance(vals[0], str):
+            # Leave single values as they are to enable formatting options like
+            # number formats, decimal digits etc.
+            vars_fmtd[key] = vals[0]
+        else:
+            # Add quotes to strings; format multi-values with plain ``str()``
+            vars_fmtd[key] = ",".join(
+                [f"'{val}'" if isinstance(val, str) else str(val) for val in vals]
+            )
+    # Relating to the note above, note that there are no checks for cases where
+    # formatting options (like decimal digits) are specified for multi-value
+    # parameters, for which this is not supported; in that case, ``str.format``
+    # will just fail
     if partial:
         return partial_format(s, **vars_fmtd)
     return s.format(**vars_fmtd)
