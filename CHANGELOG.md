@@ -9,6 +9,7 @@
   - Insert ICON namelist params in format string templates with `format_icon_params`
   - Convert time steps from ICON format to regular datetime objects with `convert_icon_time_step` and `convert_icon_time`
   - Disaggregate total precip with `disaggr_tot_precip` and derive precipitation intensity units with `deriv_precip_intensity_units`
+- Add module `atmcirclib.math` with function `step_ceil`
 - Fix `tools/create_envs.sh` (`${UPDATE}` implemented wrong)
   - TODO: Merge back to copier template and perform copier update
 
