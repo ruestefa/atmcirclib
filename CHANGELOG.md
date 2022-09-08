@@ -9,9 +9,12 @@
   - Insert ICON namelist params in format string templates with `format_icon_params`
   - Convert time steps from ICON format to regular datetime objects with `convert_icon_time_step` and `convert_icon_time`
   - Disaggregate total precip with `disaggr_tot_precip` and derive precipitation intensity units with `deriv_precip_intensity_units`
-- Add module `atmcirclib.math` with function `step_ceil`
+- Add module `atmcirclib.math` with function `step_ceil` with tests
 - Fix `tools/create_envs.sh` (`${UPDATE}` implemented wrong)
-  - TODO: Merge back to copier template and perform copier update
+  - Merged back into copier template `meta-python-project`
+- Run copier update (template `python-project`)
+  - `tools/create_envs.sh`: Fixed `${UPDATE}` bug; don't update by default
+  - `tools/install_editable.sh`: Refactored; build extension modules by default; don't install linked by default
 
 ## v0.6.0 (2022-08-29)
 
