@@ -68,3 +68,21 @@ conda install -c atmcirc atmcirclib
 conda config --add channels atmcirc
 conda install atmcirclib
 ```
+
+### Install for development
+
+With script:
+
+```bash
+INSTALL_LINKED=true tools/install_editable.sh
+```
+
+Or manually:
+
+```bash
+python setup.py build_ext --inplace
+python -m pip install --no-deps --ignore-installed -e .
+# Same projects linked in ./linked/
+```
+
+(Note that linked projects only need to be installed locally if (i) there are any (duh), and (ii) if they are edited in parallel. If they contain no local changes, the versions installed as regular dependencies will be used.)
