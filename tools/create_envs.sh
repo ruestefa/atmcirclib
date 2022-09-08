@@ -34,7 +34,7 @@ check_for_active_conda_env()
 PYTHON=${PYTHON:-}
 
 # Whether to update package versions or use existing `*environment.yml` files
-UPDATE=${UPDATE:-true}
+UPDATE=${UPDATE:-false}
 
 # Whether to abort if an active conda environment is found
 ALLOW_ACTIVE=${ALLOW_ACTIVE:-false}
