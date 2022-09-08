@@ -2,14 +2,6 @@
 # Create run and dev conda environments and export them.
 # By Stefan Ruedisuehli, stefan.ruedisuehli@env.ethz.ch, 2021/2022
 
-# Check that no conda env is activated
-if [[ "${CONDA_PREFIX}" != "" ]]; then
-    echo "please deactivate conda env and retry (detected '${CONDA_PREFIX}')" >&2
-    exit 1
-fi
-
-# Check that python git module is installed
-python -c 'import git' || { echo "Python module 'git' must be installed" >&2; exit 1; }
 
 detect_conda()
 {
@@ -27,14 +19,36 @@ detect_conda()
     return 1
 }
 
+
+check_for_active_conda_env()
+{
+    if ! ${ALLOW_ACTIVE} && [[ "${CONDA_PREFIX}" != "" ]]; then
+        echo "please deactivate conda env and retry (detected '${CONDA_PREFIX}')" >&2
+        echo "(if you know what to do, you may skip this check with ALLOW_ACTIVE=true)" >&2
+        exit 1
+    fi
+}
+
+
+# Specify a python version by setting ${PYTHON}, e.g., PYTHON=3.9
+PYTHON=${PYTHON:-}
+
+# Whether to update package versions or use existing `*environment.yml` files
+UPDATE=${UPDATE:-true}
+
+# Whether to abort if an active conda environment is found
+ALLOW_ACTIVE=${ALLOW_ACTIVE:-false}
+
+check_for_active_conda_env
+
 # Determine conda command; if available, prefer mamba over conda
 CONDA=${CONDA:-$(detect_conda)} || exit
 cmd=(${CONDA} --version)
 echo "\$ ${cmd[@]^Q}"
 eval "${cmd[@]}" || exit
 
-# Specify a python version by setting ${PYTHON}, e.g., PYTHON=3.9
-PYTHON=${PYTHON:-}
+# Check that python git module is installed
+python -c 'import git' || { echo "Python module 'git' must be installed" >&2; exit 1; }
 
 
 main()
@@ -58,7 +72,6 @@ main()
     local run_env_file="environment.yml"
     local dev_env_file="dev-environment.yml"
 
-    UPDATE=${UPDATE:-true}
     if ${UPDATE}; then
         echo "update environments from requirements"
     else
