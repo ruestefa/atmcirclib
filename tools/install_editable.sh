@@ -1,16 +1,75 @@
 #!/bin/bash
 # Install project in editable mode
 
+# Show verbose output
+VERBOSE=${VERBOSE:-true}
+
 # Force installation even if no conda environment is active
-FORCE=${FORCE:-false}
+FORCE_ACTIVE=${FORCE_ACTIVE:-true}
 
-# Also install libs that are linked in links/
-LINKED=${LINKED:-true}
+# Build extension modules
+BUILD_EXT=${BUILD_EXT:-true}
 
-if [[ "${CONDA_PREFIX}" == "" ]] && ! ${FORCE}; then
-    echo "error: no active conda environment found; activate one or set FORCE=true" >&2
+# Also install projects that are linked in links/
+INSTALL_LINKED=${INSTALL_LINKED:-false}
+
+# Build extension modules of linked projects
+BUILD_EXT_LINKED=${BUILD_EXT_LINKED:-${BUILD_EXT}}
+
+if ${FORCE_ACTIVE} && [[ "${CONDA_PREFIX}" == "" ]]; then
+    echo "error: no active conda environment found" >&2
+    echo "(if you know what you do, you may set FORCE_ACTIVE=false)" >&2
     exit 1
 fi
+
+main()
+{
+    install_editable . ${BUILD_EXT} || return
+    if ${INSTALL_LINKED}; then
+        local linked=($(detect_linked || exit)) || return
+        echo ${linked[@]}
+        local path
+        for path in "${linked[@]}"; do
+            install_editable "${path}" ${BUILD_EXT_LINKED} || return
+        done
+    fi
+}
+
+install_editable()
+{
+    local path="${1}"
+    local build_ext="${2}"
+    local setup_py="${path}/setup.py"
+    if ${build_ext} && [[ -f "${setup_py}" ]]; then
+        # If setup.py is present, build extension modules (e.g., f2py, cython)
+        # first as, e.g., skbuild doesn't do so during editable install
+        # Note that no check is done whether there are extension modules as it is
+        # not obvious how to reliably perform such a check
+        (
+            run cd "${path}" || exit
+            run python setup.py build_ext --inplace || exit
+        ) || return
+    fi
+    run python -m pip install --no-deps --ignore-installed -e "${path}" || return
+}
+
+run()
+{
+    local cmd=("${@}")
+    ${VERBOSE} && echo "RUN ${cmd[@]^Q}"
+    eval "${cmd[@]^Q}" || return
+}
+
+detect_linked()
+{
+    local links_dir="${1:-./links}"
+    check_is_dir "${links_dir}" 2>/dev/null || return
+    local link
+    for link in "${links_dir}"/*; do
+        check_is_dir_link "${link}" 2>/dev/null || continue
+        \readlink -f "$(\readlink -f "${link}" || exit)/../.." || return
+    done
+}
 
 # Check that path exists and is a directory
 check_is_dir()
@@ -67,38 +126,6 @@ check_is_dir_link()
     check_is_link "${path}" || return
     check_is_dir "${path}" || return
     return 0
-}
-
-install_editable()
-{
-    local path="${1}"
-    cmd=(python -m pip install --no-deps -e "${path}")
-    echo -e "\nRUN ${cmd[@]^Q}"
-    eval "${cmd[@]}" || return
-}
-
-detect_linked()
-{
-    local links_dir="${1:-./links}"
-    check_is_dir "${links_dir}" 2>/dev/null || return
-    local link
-    for link in "${links_dir}"/*; do
-        check_is_dir_link "${link}" 2>/dev/null || continue
-        \readlink -f "$(\readlink -f "${link}" || exit)/../.." || return
-    done
-}
-
-main()
-{
-    install_editable . || return
-    if ${LINKED}; then
-        local linked=($(detect_linked || exit)) || return
-        echo ${linked[@]}
-        local path
-        for path in "${linked[@]}"; do
-            install_editable "${path}" || return
-        done
-    fi
 }
 
 main "${@}"
