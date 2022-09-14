@@ -24,7 +24,7 @@ dependencies:
   - toml>=0.10
   - types-setuptools>=57.4
   - types-toml>=0.10
-  - # f2py build tools
+  # f2py build tools
   - cmake>=3.22
   - ninja>=1.10
   - scikit-build>=0.14
