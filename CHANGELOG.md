@@ -1,5 +1,10 @@
 # Atmcirclib: Changelog
 
+## v0.?.? (2022-??-??)
+
+- Run copier update
+  - Replaces `{,dev}-requirements.in` by `~.yml`
+
 ## v0.7.0 (2022-09-14)
 
 - Add module `atmcirclib.typer` with decorator `typer_wrap_pdb` (analogue to `atmcirclib.click.click_wrap_pdb`) and some additional conveniences
