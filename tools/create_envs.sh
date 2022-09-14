@@ -20,16 +20,6 @@ detect_conda()
 }
 
 
-check_for_active_conda_env()
-{
-    if ! ${ALLOW_ACTIVE} && [[ "${CONDA_PREFIX}" != "" ]]; then
-        echo "please deactivate conda env and retry (detected '${CONDA_PREFIX}')" >&2
-        echo "(if you know what to do, you may skip this check with ALLOW_ACTIVE=true)" >&2
-        exit 1
-    fi
-}
-
-
 # Specify a python version by setting ${PYTHON}, e.g., PYTHON=3.9
 PYTHON=${PYTHON:-}
 
@@ -37,9 +27,8 @@ PYTHON=${PYTHON:-}
 UPDATE=${UPDATE:-false}
 
 # Whether to abort if an active conda environment is found
-ALLOW_ACTIVE=${ALLOW_ACTIVE:-false}
-
-check_for_active_conda_env
+# Note: Always abort if an env is active named like one of those to be created
+ALLOW_ACTIVE=${ALLOW_ACTIVE:-true}
 
 # Determine conda command; if available, prefer mamba over conda
 CONDA=${CONDA:-$(detect_conda)} || exit
@@ -47,15 +36,12 @@ cmd=(${CONDA} --version)
 echo "\$ ${cmd[@]^Q}"
 eval "${cmd[@]}" || exit
 
-# Check that python git module is installed
-python -c 'import git' || { echo "Python module 'git' must be installed" >&2; exit 1; }
-
 
 main()
 {
     local env_names=("${@}")
 
-    local repo_name
+    local repo_name  # local on separate line so it doesn't eat return value
     repo_name=$(get_repo_name) || return
     local run_env_name="${repo_name}"
     local dev_env_name="${repo_name}-dev"
@@ -64,6 +50,8 @@ main()
     if [ ${#env_names[@]} -eq 0 ]; then
         env_names=("${default_env_names[@]}")
     fi
+
+    check_active_conda_env "${env_names[@]}" || return
 
     local run_reqs_file
     local dev_reqs_file
@@ -239,9 +227,47 @@ check_python_version()
 }
 
 
+check_active_conda_env()
+{
+    local forbidden_names=("${@}")
+    local active_name="$(basename "${CONDA_PREFIX}")"
+    if [[ "${active_name}" == "" ]]; then
+        # No active conda env: All good!
+        return 0
+    elif ! ${ALLOW_ACTIVE}; then
+        # Active conda env found, but not allowed: Error!
+        echo "detected active conda env: ${active_name}" >&2
+        echo "no active envs allowed, so please deactivate it!" >&2
+        echo "(set ALLOW_ACTIVE=true if you know what to do)" >&2
+        return 1
+    else
+        # Active conda env found: Check its name
+        for forbidden_name in "${forbidden_names[@]}"; do
+            if [[ "${active_name}" == "${forbidden_name}" ]]; then
+                echo "detected active conda env: ${active_name}" >&2
+                echo "forbidden env names: ${forbidden_names[@]}" >&2
+                echo "env has forbidden name, so please deactivate it!" >&2
+                return 1
+            fi
+        done
+        return 0
+    fi
+}
+
+
+check_gitpython_installed()
+{
+    python -c 'import git' && return 0
+    echo "Python module 'git' must be installed:" >&2
+    echo " mamba install gitpython --yes" >&2
+    return 1
+}
+
+
 get_repo_name()
 {
     local cmd="from pathlib import Path"
+    check_gitpython_installed || return
     cmd+="; from git import Repo"
     cmd+="; print(Path(Repo('.', search_parent_directories=True).working_tree_dir).name)"
     python -c "${cmd}" && return 0

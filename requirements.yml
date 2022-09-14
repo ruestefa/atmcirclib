@@ -1,0 +1,15 @@
+name: atmcirclib
+channels:
+  - atmcirc
+  - conda-forge
+  - defaults
+dependencies:
+  - python>=3.9
+  - atmcirc::gt4py>=2022.04.09
+  - cartopy>=0.20
+  - click>=8.1
+  - netcdf4>=1.5
+  - numpy>=1.22
+  - pandas>=1.4
+  - typer>=0.6
+  - xarray>=2022.3

@@ -1,0 +1,30 @@
+name: atmcirclib-dev
+channels:
+  - atmcirc
+  - conda-forge
+  - defaults
+dependencies:
+  - atmcirc::copier>=6.0.0
+  - anaconda-client>=1.8
+  - black>=22.3
+  - conda-build>=3.21
+  - flake8>=4.0
+  - ipdb>=0.13
+  - ipython>=8.3
+  - isort>=5.10
+  - mccabe>=0.6
+  - mypy>=0.942
+  - mamba>=0.23
+  - pre-commit>=2.18
+  - pylint>=2.13
+  - pytest>=7.1
+  - rich>=12.5
+  - tox-conda>=0.9
+  - tox>=3.25
+  - toml>=0.10
+  - types-setuptools>=57.4
+  - types-toml>=0.10
+  - # f2py build tools
+  - cmake>=3.22
+  - ninja>=1.10
+  - scikit-build>=0.14

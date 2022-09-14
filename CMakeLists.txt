@@ -5,7 +5,9 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 # Fetch input/environment variables
 #-------------------------------------------------------------------------------
 
-if (NOT DEFINED($ENV{CMAKE_PYTHON_VERSION}))
+if (DEFINED($ENV{CMAKE_PYTHON_VERSION}))
+    set(CMAKE_PYTHON_VERSION $ENV{CMAKE_PYTHON_VERSION})
+elseif (NOT DEFINED CMAKE_PYTHON_VERSION)
     set(CMAKE_PYTHON_VERSION 3.9)
 endif()
 if (DEFINED($ENV{CMAKE_PREFIX_PATH}))
