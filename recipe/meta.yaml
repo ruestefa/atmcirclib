@@ -1,6 +1,6 @@
 {% set name = "atmcirclib" %}
 {% set package = "atmcirclib" %}
-{% set version = "0.6.0" %}
+{% set version = "0.7.0" %}
 {% set build = "0" %}
 
 package:
@@ -33,6 +33,7 @@ requirements:
     - netcdf4>=1.5
     - numpy>=1.22
     - pandas>=1.4
+    - typer>=0.6
     - xarray>=2022.3
 
 test:
@@ -113,3 +114,21 @@ about:
     conda config --add channels atmcirc
     conda install atmcirclib
     ```
+
+    ### Install for development
+
+    With script:
+
+    ```bash
+    INSTALL_LINKED=true tools/install_editable.sh
+    ```
+
+    Or manually:
+
+    ```bash
+    python setup.py build_ext --inplace
+    python -m pip install --no-deps --ignore-installed -e .
+    # Same projects linked in ./linked/
+    ```
+
+    (Note that linked projects only need to be installed locally if (i) there are any (duh), and (ii) if they are edited in parallel. If they contain no local changes, the versions installed as regular dependencies will be used.)
