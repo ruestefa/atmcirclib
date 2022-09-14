@@ -1,12 +1,6 @@
 #!/bin/bash
 # Install project in editable mode
 
-# Show verbose output
-VERBOSE=${VERBOSE:-true}
-
-# Force installation even if no conda environment is active
-FORCE_ACTIVE=${FORCE_ACTIVE:-true}
-
 # Build extension modules
 BUILD_EXT=${BUILD_EXT:-true}
 
@@ -14,7 +8,13 @@ BUILD_EXT=${BUILD_EXT:-true}
 INSTALL_LINKED=${INSTALL_LINKED:-false}
 
 # Build extension modules of linked projects
-BUILD_EXT_LINKED=${BUILD_EXT_LINKED:-${BUILD_EXT}}
+BUILD_EXT_LINKED=${BUILD_EXT_LINKED:-false}
+
+# Force installation even if no conda environment is active
+FORCE_ACTIVE=${FORCE_ACTIVE:-true}
+
+# Show verbose output
+VERBOSE=${VERBOSE:-true}
 
 if ${FORCE_ACTIVE} && [[ "${CONDA_PREFIX}" == "" ]]; then
     echo "error: no active conda environment found" >&2
@@ -24,18 +24,22 @@ fi
 
 main()
 {
-    install_editable . ${BUILD_EXT} || return
+    pip_install_editable . ${BUILD_EXT} || return
     if ${INSTALL_LINKED}; then
         local linked=($(detect_linked || exit)) || return
-        echo ${linked[@]}
+        echo "found ${#linked[@]} linked project(s)"
         local path
         for path in "${linked[@]}"; do
-            install_editable "${path}" ${BUILD_EXT_LINKED} || return
+            echo "link project at ${path}"
+            # If linked package is not uninstalled with conda, that installation
+            # may have precedence over the editable local installation
+            conda_uninstall_from_path "${path}" || return
+            pip_install_editable "${path}" ${BUILD_EXT_LINKED} || return
         done
     fi
 }
 
-install_editable()
+pip_install_editable()
 {
     local path="${1}"
     local build_ext="${2}"
@@ -51,6 +55,28 @@ install_editable()
         ) || return
     fi
     run python -m pip install --no-deps --ignore-installed -e "${path}" || return
+}
+
+conda_uninstall_from_path()
+{
+    local path="${1}"
+    local output pkgs  # put local on separate line to retain return values of assignment commands
+    output="$(python -m pip install --no-deps --ignore-installed -e "${path}" --dry-run)" || return
+    pkgs=($(echo "${output}" | \grep '^ *Would install' | \sed "s/^ *Would install //")) || return
+    local pkg
+    for pkg in "${pkgs[@]}"; do
+        rx='^\([a-zA-Z0-9_-]\+\)-\([0-9]\+\.[0-9]\+.*\)'
+        local pkg_name="$(echo "${pkg}" | \sed "s/${rx}/\1/")" || return
+        output="$(run conda uninstall --force "${pkg_name}" --yes 2>&1)"
+        if [[ ${?} -ne 0 ]]; then
+            if echo "${output}" | \grep -q "PackagesNotFoundError"; then
+                continue
+            else
+                echo "output" >&2
+                return 1
+            fi
+        fi
+    done
 }
 
 run()
