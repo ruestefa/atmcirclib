@@ -20,18 +20,40 @@ detect_conda()
 }
 
 
-# Specify a python version by setting ${PYTHON}, e.g., PYTHON=3.9
-PYTHON=${PYTHON:-}
+# Default options
+PYTHON_VERSION=""
+UPDATE=false
+CONDA=""
 
-# Whether to update package versions or use existing `*environment.yml` files
-UPDATE=${UPDATE:-false}
 
-# Whether to abort if an active conda environment is found
-# Note: Always abort if an env is active named like one of those to be created
-ALLOW_ACTIVE=${ALLOW_ACTIVE:-true}
+USAGE="Usage: $(basename "${0}") [option[s]]
+
+Options:
+ -p VER     Specify a python version, e.g., 3.9
+ -u         Update package versions and export new environment files
+ -c CMD     Specify conda command instead of auto-detecting mamba or conda
+
+"
+
+# Eval CLI arguments
+while getopts p:uh flag; do
+    case "${flag}" in
+        p) PYTHON_VERSION="${OPTARG}";;
+        c) CONDA="${OPTARG}";;
+        u) UPDATE=true;;
+        h)
+            echo "${USAGE}"
+            exit 0
+        ;;
+        ?)
+            echo -e "\n${USAGE}" >&2
+            exit 1
+        ;;
+    esac
+done
 
 # Determine conda command; if available, prefer mamba over conda
-CONDA=${CONDA:-$(detect_conda)} || exit
+[[ "${CONDA}" == "" ]] && { CONDA="$(detect_conda)" || exit; }
 cmd=(${CONDA} --version)
 echo "\$ ${cmd[@]^Q}"
 eval "${cmd[@]}" || exit
@@ -39,26 +61,32 @@ eval "${cmd[@]}" || exit
 
 main()
 {
-    local env_names=("${@}")
-
     local repo_name  # local on separate line so it doesn't eat return value
     repo_name=$(get_repo_name) || return
     local run_env_name="${repo_name}"
     local dev_env_name="${repo_name}-dev"
-
-    local default_env_names=("${run_env_name}" "${dev_env_name}")
-    if [ ${#env_names[@]} -eq 0 ]; then
-        env_names=("${default_env_names[@]}")
-    fi
+    local env_names=("${run_env_name}" "${dev_env_name}")
 
     check_active_conda_env "${env_names[@]}" || return
 
-    local run_reqs_file
-    local dev_reqs_file
-    run_reqs_file="$(select_first_existing_file "requirements.yml" "requirements.in")" || return
-    dev_reqs_file="$(select_first_existing_file "dev-requirements.yml" "dev-requirements.in")" || return
-    local run_env_file="environment.yml"
-    local dev_env_file="dev-environment.yml"
+    local possible_run_reqs_files=(
+        "requirements/requirements.yml"
+        "requirements.yml"
+        "requirements/requirements.in"
+        "requirements.in"
+    )
+    local possible_dev_reqs_files=(
+        "requirements/dev-requirements.yml"
+        "dev-requirements.yml"
+        "requirements/dev-requirements.in"
+        "dev-requirements.in"
+    )
+    local run_reqs_file dev_reqs_file
+    run_reqs_file="$(select_first_existing_file "${possible_run_reqs_files[@]}")" || return
+    dev_reqs_file="$(select_first_existing_file "${possible_dev_reqs_files[@]}")" || return
+    local run_env_file dev_env_file
+    run_env_file="$(file_in_same_location "${run_reqs_file}" "environment.yml")" || return
+    dev_env_file="$(file_in_same_location "${dev_reqs_file}" "dev-environment.yml")" || return
 
     if ${UPDATE}; then
         echo "update environments from requirements"
@@ -147,10 +175,10 @@ sort_reqs_files()
 create_empty_env()
 {
     local env_name="${1}"
-    # Install python if PYTHON is set
-    case "${PYTHON}" in
+    # Install python if PYTHON_VERSION is set
+    case "${PYTHON_VERSION}" in
         "") local pyflag="";;
-        *) local pyflag=" python==${PYTHON}";;
+        *) local pyflag=" python==${PYTHON_VERSION}";;
     esac
     cmd=(${CONDA} create -n "${env_name}"${pyflag} --yes)
     echo "\$ ${cmd[@]^Q}"
@@ -194,7 +222,7 @@ recreate_env()
     local env_name="${1}"
     local env_file="${2}"
     echo "recreate conda env '${env_name}' from ${env_file}"
-    local cmd=(${CONDA} env create -n "${env_name}" python==${PYTHON} --file="${env_file}")
+    local cmd=(${CONDA} env create -n "${env_name}" python==${PYTHON_VERSION} --file="${env_file}")
     echo "\$ ${cmd[@]^Q}"
     eval "${cmd[@]}" || return 1
     return 0
@@ -216,11 +244,11 @@ export_env()
 
 check_python_version()
 {
-    if [[ "${PYTHON}" != "" ]]; then
+    if [[ "${PYTHON_VERSION}" != "" ]]; then
         local installed_python="$(\grep -o '\<python=3.[0-9]\+.[0-9]\+' "${env_file}")"
-        if [[ "${installed_python}" != "python=${PYTHON}"* ]]; then
+        if [[ "${installed_python}" != "python=${PYTHON_VERSION}"* ]]; then
             local msg="warning: installed python version (${installed_python}) differs from"
-            msg+=" requested (PYTHON=${PYTHON}); overridden by requirements file?"
+            msg+=" requested (PYTHON=${PYTHON_VERSION}); overridden by requirements file?"
             echo "${msg}" >&2
         fi
     fi
@@ -234,24 +262,17 @@ check_active_conda_env()
     if [[ "${active_name}" == "" ]]; then
         # No active conda env: All good!
         return 0
-    elif ! ${ALLOW_ACTIVE}; then
-        # Active conda env found, but not allowed: Error!
-        echo "detected active conda env: ${active_name}" >&2
-        echo "no active envs allowed, so please deactivate it!" >&2
-        echo "(set ALLOW_ACTIVE=true if you know what to do)" >&2
-        return 1
-    else
-        # Active conda env found: Check its name
-        for forbidden_name in "${forbidden_names[@]}"; do
-            if [[ "${active_name}" == "${forbidden_name}" ]]; then
-                echo "detected active conda env: ${active_name}" >&2
-                echo "forbidden env names: ${forbidden_names[@]}" >&2
-                echo "env has forbidden name, so please deactivate it!" >&2
-                return 1
-            fi
-        done
-        return 0
     fi
+    # Active conda env found: Check its name
+    for forbidden_name in "${forbidden_names[@]}"; do
+        if [[ "${active_name}" == "${forbidden_name}" ]]; then
+            echo "detected active conda env: ${active_name}" >&2
+            echo "forbidden env names: ${forbidden_names[@]}" >&2
+            echo "env has forbidden name, so please deactivate it!" >&2
+            return 1
+        fi
+    done
+    return 0
 }
 
 
@@ -288,6 +309,19 @@ select_first_existing_file()
     done
     echo "none of these files exist: ${files[@]^Q}" >&2
     return 1
+}
+
+
+file_in_same_location()
+{
+    local ref_file_path="${1}"
+    local file_name="${2}"
+    local path
+    path="$(dirname "${ref_file_path}")" || return
+    case "${path}" in
+        "") echo "${file_name}";;
+        *) echo "${path}/${file_name}";;
+    esac
 }
 
 

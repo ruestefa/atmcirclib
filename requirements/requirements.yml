@@ -5,7 +5,7 @@ channels:
   - defaults
 dependencies:
   - python>=3.9
-  - atmcirc::gt4py>=2022.04.09
+  - atmcirc::gt4py>=2022.09.29
   - cartopy>=0.20
   - click>=8.1
   - netcdf4>=1.5
