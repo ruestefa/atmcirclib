@@ -1,9 +1,12 @@
 # Atmcirclib: Changelog
 
-## v0.?.? (2022-??-??)
+## v0.7.1 (2022-10-04)
 
-- Run copier update
+- Run copier updates
   - Replaces `{,dev}-requirements.in` by `~.yml`
+  - Moves requirements and environments files into `requirements/`
+- Update `gt4py` version to `v2022-09-29`
+  - Fixes installation problem with `xxhash` (called `python-xxhash` in `conda-forge`)
 
 ## v0.7.0 (2022-09-14)
 
