@@ -20,6 +20,9 @@ build:
 
 requirements:
   host:
+    {% for dep in pyproject["build-system"]["requires"] %}
+    - {{ dep.lower() }}
+    {% endfor %}
     {% for dep in requirements["dependencies"] %}
     - {{ dep.lower() }}
     {% endfor %}
