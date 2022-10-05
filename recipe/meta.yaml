@@ -1,5 +1,6 @@
 {% set name = "atmcirclib" %}
 {% set package = "atmcirclib" %}
+{% set git_url = "git+ssh://git@git.iac.ethz.ch/atmcirc/tools/atmcirclib.git" %}
 {% set version = "0.7.1" %}
 {% set build = "0" %}
 {% set pyproject = load_file_data("../pyproject.toml", from_recipe_dir=True) %}
@@ -11,7 +12,7 @@ package:
 
 source:
   git_rev: v{{ version }}
-  git_url: git+ssh://git@git.iac.ethz.ch/atmcirc/tools/atmcirclib.git
+  git_url: {{ git_url }}
 
 build:
   noarch: python
@@ -20,6 +21,9 @@ build:
 
 requirements:
   host:
+    {% for dep in pyproject["build-system"]["requires"] %}
+    - {{ dep.lower() }}
+    {% endfor %}
     {% for dep in requirements["dependencies"] %}
     - {{ dep.lower() }}
     {% endfor %}
