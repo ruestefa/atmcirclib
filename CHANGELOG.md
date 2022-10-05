@@ -1,6 +1,6 @@
 # Atmcirclib: Changelog
 
-## v0.7.1 (2022-10-04)
+## v0.7.1 (2022-10-05)
 
 - Run copier updates
   - Replaces `{,dev}-requirements.in` by `~.yml`
