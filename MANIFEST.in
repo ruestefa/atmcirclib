@@ -2,8 +2,7 @@ include README.md
 include CHANGELOG.md
 include LICENSE
 
-include *requirements.in
-include *environment.yml
+recursive-include requirements *.yml
 
 recursive-include src/*/data *
 recursive-include src py.typed

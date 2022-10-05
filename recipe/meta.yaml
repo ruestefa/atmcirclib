@@ -1,7 +1,8 @@
 {% set name = "atmcirclib" %}
 {% set package = "atmcirclib" %}
-{% set version = "0.7.0" %}
+{% set version = "0.7.1" %}
 {% set build = "0" %}
+{% set requirements = load_file_data("../requirements/requirements.yml", from_recipe_dir=True) %}
 
 package:
   name: {{ name | lower }}
@@ -18,23 +19,13 @@ build:
 
 requirements:
   host:
-    - python
-    - pip
-    - cmake>=3.22
-    - ninja>=1.10
-    - numpy>=1.22
-    - scikit-build>=0.14
-    - setuptools>=35.0.2
-    - wheel>=0.37
+    {% for dep in requirements["dependencies"] %}
+    - {{ dep.lower() }}
+    {% endfor %}
   run:
-    - gt4py==2022.04.09
-    - cartopy>=0.20
-    - click>=8.1
-    - netcdf4>=1.5
-    - numpy>=1.22
-    - pandas>=1.4
-    - typer>=0.6
-    - xarray>=2022.3
+    {% for dep in requirements["dependencies"] %}
+    - {{ dep.lower() }}
+    {% endfor %}
 
 test:
   imports:
@@ -43,92 +34,4 @@ test:
 about:
   license: MIT
   summary: Python library of the Atmospheric Circulation Group
-  description: |
-    # AtmCircLib: Python library of the Atmospheric Circulation Group
-
-    ## Create new conda release
-
-    ### Prepare environment
-
-    Prepare conda (only required once):
-
-    ```bash
-    conda config --set anaconda_upload no
-    ```
-
-    Install required packages:
-
-    ```bash
-    conda env create -n <name> --file=dev-environment.yaml`
-    # or
-    conda install conda-build anaconda-client
-    ```
-
-    ### Create release
-
-    Save the old `build.yaml`:
-
-    ```bash
-    git mv recipe/build.yaml recipe/build_v0.1.0.yaml
-    ```
-
-    Generate a new `build.yaml` (rather than writing it by hand):
-
-    ```bash
-    ./tools/create_recipe.py
-    # -> create ./recipe/build.yaml
-    ```
-
-    (Note that for repositories that reside on github, the tool `grayskull` can be used, but as of v1.1.2 it does not yet support gitlab repositories.)
-
-    Commit and push the new file, then create a new release on gitlab/github.
-
-    ### Create conda package
-
-    Build conda package (may take a few minutes):
-
-    ```bash
-    conda build ./recipe/
-    # -> creates <path/to/conda-bld>/noarch/atmcirclib-0.2.0-py_0.tar.bz2
-    ```
-
-    Log in to anaconda (should only required once per machine):
-
-    ```bash
-    anaconda login --username <username>
-    # -> prompts password
-    ```
-
-    Upload the conda package to the anaconda channel `atmcirc`:
-
-    ```bash
-    anaconda upload --user atmcirc <path/to/conda-bld>/noarch/atmcirclib-0.2.0-py_0.tar.bz2
-    # -> uploads to https://anaconda.org/atmcirc/atmcirclib
-    ```
-
-    ### Install the package
-
-    ```bash
-    conda install -c atmcirc atmcirclib
-    # or
-    conda config --add channels atmcirc
-    conda install atmcirclib
-    ```
-
-    ### Install for development
-
-    With script:
-
-    ```bash
-    INSTALL_LINKED=true tools/install_editable.sh
-    ```
-
-    Or manually:
-
-    ```bash
-    python setup.py build_ext --inplace
-    python -m pip install --no-deps --ignore-installed -e .
-    # Same projects linked in ./linked/
-    ```
-
-    (Note that linked projects only need to be installed locally if (i) there are any (duh), and (ii) if they are edited in parallel. If they contain no local changes, the versions installed as regular dependencies will be used.)
+  description: Python library of the Atmospheric Circulation Group
