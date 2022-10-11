@@ -72,6 +72,15 @@ class RegularGrid:
             )
         return ccrs.PlateCarree()
 
+    def get_extent(self, *, grow: float = 0.0) -> tuple[float, float, float, float]:
+        """Get domain extent, optionally enlarged by relative factor ``grow``."""
+        return (
+            self.ll_lon - 0.5 * grow * self.lon_extent,
+            self.ur_lon + 0.5 * grow * self.lon_extent,
+            self.ll_lat - 0.5 * grow * self.lat_extent,
+            self.ur_lat + 0.5 * grow * self.lat_extent,
+        )
+
     def get_bnd_w(self) -> npt.NDArray[np.float_]:
         """Compute geographic lat/lon coordinates of western boundary."""
         proj_geo = ccrs.PlateCarree()
@@ -233,7 +242,7 @@ class RegularGridPlotter:
     def add_topo_contours(
         self,
         ax: GeoAxes,
-        levels: Sequence[float],
+        levels: Union[Sequence[float], npt.NDArray[np.float_]],
         **kwargs: Any,
     ) -> GeoContourSet:
         """Plot model topography on a map plot axes."""
