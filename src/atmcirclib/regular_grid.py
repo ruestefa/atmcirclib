@@ -49,6 +49,7 @@ class RegularGrid:
         self.pole_lat = pole_lat
         self.pole_lon = pole_lon
         self.topo = topo
+        self._check_topo()
         self.ll_lat: float = self.lat1d[0]
         self.ll_lon: float = self.lon1d[0]
         self.ur_lat: float = self.lat1d[-1]
@@ -115,18 +116,18 @@ class RegularGrid:
         ).T
         return np.array([lats, lons])
 
-    def shrink(self, *, pts: int = 0, keep_topo: bool = True) -> RegularGrid:
+    def shrink(self, *, n_bnd: int = 0, keep_topo: bool = True) -> RegularGrid:
         """Shrink the grid in all four directions."""
-        if pts < 0:
-            raise ValueError(f"pts must be positive: {pts}")
-        lat1d = self.lat1d[pts:-pts]
-        lon1d = self.lon1d[pts:-pts]
+        if n_bnd < 0:
+            raise ValueError(f"pts must be positive: {n_bnd}")
+        lat1d = self.lat1d[n_bnd:-n_bnd]
+        lon1d = self.lon1d[n_bnd:-n_bnd]
         topo = self.topo
         if topo is not None:
             if not keep_topo:
                 topo = None
             else:
-                topo = topo[pts:-pts, pts:-pts]
+                topo = topo[n_bnd:-n_bnd, n_bnd:-n_bnd]
         return type(self)(
             lat1d=lat1d,
             lon1d=lon1d,
@@ -134,6 +135,15 @@ class RegularGrid:
             pole_lon=self.pole_lon,
             topo=topo,
         )
+
+    def _check_topo(self) -> None:
+        """Check consistency of topo field with grid size."""
+        if self.topo is None:
+            return
+        if (sh_topo := self.topo.shape) != (sh := (self.lat1d.size, self.lon1d.size)):
+            raise Exception(
+                f"shape of topo is incompatible with lat1d/lon2d: {sh_topo} vs. ({sh})"
+            )
 
     @classmethod
     def from_cosmo_file(
