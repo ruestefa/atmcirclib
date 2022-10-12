@@ -392,13 +392,14 @@ class RegularGridPlot:
         self._outline_labels: list[Optional[str]] = []
         self._outline_handles: list[Line2D] = []
 
-    def add_grid_lines(self) -> None:
+    def add_grid_lines(self, **kwargs: Any) -> None:
         """Add grid lines."""
-        self._main_grid_pltr.add_grid_lines(
-            self.ax,
-            linewidth=1.0 * self.scale,
-            fontsize=self.fs.m,
-        )
+        kwargs = {
+            "linewidth": 1.0 * self.scale,
+            "fontsize": self.fs.m,
+            **kwargs,
+        }
+        self._main_grid_pltr.add_grid_lines(self.ax, **kwargs)
 
     def add_outlines(
         self,
