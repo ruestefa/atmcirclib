@@ -1,8 +1,10 @@
 # Atmcirclib: Changelog
 
-## v0.?.? (2022-??-??)
+## v0.8.0 (2022-10-12)
 
-- TODO
+- Add module `atmcirclib.plot_utils` with functions to manipulate colormaps (moved from `cosmo_natl.crclim_domains`).
+- Add module `atmcirclib.regular_grid` with classes `RegularGrid`, `RegularGridPlotter` and `RegularGridPlot` (originally moved from `cosmo_natl.crclim_domains`)
+  - Purpose: Create plot with multiple grid outlines on top of the model topography
 
 ## v0.7.1 (2022-10-05)
 
