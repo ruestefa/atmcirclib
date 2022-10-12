@@ -117,7 +117,9 @@ class RegularGrid:
         return np.array([lats, lons])
 
     @classmethod
-    def from_cosmo_file(cls, path: Path, n_bnd: int = 0) -> RegularGrid:
+    def from_cosmo_file(
+        cls, path: Path, *, n_bnd: int = 0, read_topo: bool = False
+    ) -> RegularGrid:
         """Read grid information and (optionally) grid arrays from file."""
         print(f"{cls.__name__}.from_cosmo_file({path}, {n_bnd=})")
         kwargs = {}
@@ -128,9 +130,10 @@ class RegularGrid:
             pole_var = fi.variables["rotated_pole"]
             kwargs["pole_lat"] = pole_var.getncattr("grid_north_pole_latitude")
             kwargs["pole_lon"] = pole_var.getncattr("grid_north_pole_longitude")
-            topo = fi.variables["HSURF"][0, idcs, idcs]
-            land = fi.variables["FR_LAND"][0, idcs, idcs]
-            kwargs["topo"] = np.where((topo > 0) & (land > 0), topo, 0.0)
+            if read_topo:
+                topo = fi.variables["HSURF"][0, idcs, idcs]
+                land = fi.variables["FR_LAND"][0, idcs, idcs]
+                kwargs["topo"] = np.where((topo > 0) & (land > 0), topo, 0.0)
         return cls(**kwargs)
 
 
