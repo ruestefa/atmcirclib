@@ -5,7 +5,7 @@
 BUILD_EXT=${BUILD_EXT:-true}
 
 # Also install projects that are linked in links/
-INSTALL_LINKED=${INSTALL_LINKED:-false}
+INSTALL_LINKED=${INSTALL_LINKED:-true}
 
 # Build extension modules of linked projects
 BUILD_EXT_LINKED=${BUILD_EXT_LINKED:-false}
