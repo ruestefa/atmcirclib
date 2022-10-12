@@ -421,9 +421,11 @@ class RegularGridPlot:
 
     def add_outline_legend(self, **kwargs: Any) -> None:
         """Add legend for domain outlines."""
+        y0 = self._get_legend_y0()
+        bbox_to_anchor_ = (0.075, y0, 0.85, -y0)
         kwargs = {
             "loc": "lower center",
-            "bbox_to_anchor": (0.075, -0.10, 0.85, 0.2),
+            "bbox_to_anchor": bbox_to_anchor_,
             "frameon": False,
             "mode": "expand",
             "ncol": 2,
@@ -473,13 +475,23 @@ class RegularGridPlot:
         *,
         label: str = "Model surface height (m)",
         ticks: Optional[Union[Sequence[float], npt.NDArray[np.float_]]] = None,
+        bbox_to_anchor: Optional[tuple[float, float, float, float]] = None,
     ) -> Colorbar:
-        """Add topography color bar using the latest color plot handle."""
+        """Add topography color bar using the latest color plot handle.
+
+        Note that because the default vertical position depends on the size of
+        the outline legend box between the plot and the color bar, the outlines
+        need to be added to the plot before the color bar.
+
+        """
         try:
             col_handle = self._topo_col_handles[-1]
         except IndexError as e:
             raise Exception("must add topo color field before adding cbar") from e
-        ax_cb: Axes = self.fig.add_axes([0.05, -0.14, 0.9, 0.04])
+        if bbox_to_anchor is None:
+            y0 = self._get_cbar_y0()
+            bbox_to_anchor = (0.05, y0, 0.9, 0.04)
+        ax_cb: Axes = self.fig.add_axes(bbox_to_anchor)
         cb: Colorbar = self.fig.colorbar(
             col_handle, cax=ax_cb, ticks=ticks, orientation="horizontal"
         )
@@ -498,3 +510,15 @@ class RegularGridPlot:
         if grid is None:
             return self._main_grid_pltr
         return RegularGridPlotter(grid)
+
+    def _get_legend_y0(self) -> float:
+        """Get vertical baseline position for legend box below plot."""
+        nl = len(self._outline_labels)
+        # Empirical formula based on one and two rows of labels
+        # May need to be adjusted for more rows (not tested)
+        return -0.03 - (int(nl / 2 + 0.5) - 1) * 0.07
+
+    def _get_cbar_y0(self) -> float:
+        """Get vertical baseline position of color bar below plot and legend."""
+        # Empirical formula based on up to two rows of legend
+        return self._get_legend_y0() - 0.05
