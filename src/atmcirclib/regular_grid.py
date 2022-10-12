@@ -13,13 +13,16 @@ from typing import Union
 # Third-party
 import cartopy.crs as ccrs
 import matplotlib as mpl
+import matplotlib.pyplot as plt
 import netCDF4 as nc4
 import numpy as np
 import numpy.typing as npt
 from cartopy.mpl.contour import GeoContourSet
 from cartopy.mpl.geoaxes import GeoAxes
 from matplotlib.axes import Axes
+from matplotlib.colorbar import Colorbar
 from matplotlib.colors import Colormap
+from matplotlib.figure import Figure
 from matplotlib.lines import Line2D
 
 # Local
@@ -277,3 +280,141 @@ class RegularGridPlotter:
         cmap.set_under("cornflowerblue")
         cmap.set_over("red")
         return cmap
+
+
+@dc.dataclass
+class FontSizes:
+    """Large, medium and small font sizes."""
+
+    l: float = 14
+    m: float = 12
+    s: float = 10
+
+    def scale(self, f: float) -> FontSizes:
+        """Return scaled font sizes."""
+        return type(self)(
+            l=self.l * f,  # noqa: disable=E741  # ambiguous variable name 'l'
+            m=self.m * f,
+            s=self.s * f,
+        )
+
+
+class RegularGridPlot:
+    """Plot one or more regular model grids with topography etc."""
+
+    def __init__(
+        self,
+        grid: RegularGrid,
+        *,
+        scale: float = 1.0,
+    ) -> None:
+        """Create a new instance."""
+        self.grid = grid
+        self.scale = scale
+
+        self.fs = FontSizes().scale(self.scale)
+
+        self.fig: Figure = plt.figure(figsize=(8 * self.scale, 8 * self.scale))
+        self.fig.set_facecolor("white")
+
+        self.ax: Axes = self.fig.add_axes(
+            [0.05, 0.05, 0.9, 0.9], projection=self.grid.get_proj()
+        )
+        self.ax.set_adjustable("box")
+        self.ax.set_extent(self.grid.get_extent(grow=0.03), crs=self.grid.get_proj())
+
+        self._grid_pltr = RegularGridPlotter(self.grid)
+
+        self._topo_con_handles: list[GeoContourSet] = []
+        self._topo_col_handles: list[GeoContourSet] = []
+        self._outline_labels: list[Optional[str]] = []
+        self._outline_handles: list[Line2D] = []
+
+    def add_grid_lines(self) -> None:
+        """Add grid lines."""
+        self._grid_pltr.add_grid_lines(
+            self.ax,
+            linewidth=1.0 * self.scale,
+            fontsize=self.fs.m,
+        )
+
+    def add_outline(
+        self,
+        *,
+        grid: Optional[RegularGrid] = None,
+        label: Optional[str] = None,
+        **kwargs: Any,
+    ) -> Line2D:
+        """Add grid outline."""
+        pltr = self._get_pltr(grid)
+        handle = pltr.add_outline(self.ax, **kwargs)
+        self._outline_handles.append(handle)
+        self._outline_labels.append(label)
+        return handle
+
+    def add_outline_legend(self, **kwargs: Any) -> None:
+        """Add legend for domain outlines."""
+        kwargs = {
+            "loc": "lower center",
+            "bbox_to_anchor": (0.075, -0.10, 0.85, 0.2),
+            "frameon": False,
+            "mode": "expand",
+            "ncol": 2,
+            "fontsize": self.fs.l,
+            "handlelength": 2.5,
+            **kwargs,
+        }
+        self.fig.legend(
+            handles=self._outline_handles,
+            labels=self._outline_labels,
+            **kwargs,
+        )
+
+    def add_topo(
+        self,
+        *,
+        levels_col: Optional[Union[Sequence[float], npt.NDArray[np.float_]]] = None,
+        levels_con: Optional[Union[Sequence[float], npt.NDArray[np.float_]]] = None,
+        grid: Optional[RegularGrid] = None,
+    ) -> None:
+        """Add topography."""
+        pltr = self._get_pltr(grid)
+        if levels_col is not None:
+            handle = pltr.add_topo_colors(self.ax, levels_col)
+            self._topo_col_handles.append(handle)
+        if levels_con is not None:
+            handle = pltr.add_topo_contours(
+                self.ax, levels_con, linewidths=0.8 * self.scale
+            )
+            self._topo_con_handles.append(handle)
+
+    def add_topo_cbar(
+        self,
+        *,
+        label: str = "Model surface height (m)",
+        ticks: Optional[Union[Sequence[float], npt.NDArray[np.float_]]] = None,
+    ) -> Colorbar:
+        """Add topography color bar using the latest color plot handle."""
+        try:
+            col_handle = self._topo_col_handles[-1]
+        except IndexError as e:
+            raise Exception("must add topo color field before adding cbar") from e
+        ax_cb: Axes = self.fig.add_axes([0.05, -0.14, 0.9, 0.04])
+        cb: Colorbar = self.fig.colorbar(
+            col_handle, cax=ax_cb, ticks=ticks, orientation="horizontal"
+        )
+        try:
+            con_handle = self._topo_con_handles[-1]
+        except IndexError:
+            pass
+        else:
+            cb.add_lines(con_handle)
+        cb.ax.tick_params(labelsize=self.fs.m)
+        cb.set_label(label, fontsize=self.fs.l)
+        return cb
+
+    def _get_pltr(self, grid: Optional[RegularGrid]) -> RegularGridPlotter:
+        """Get plotter of default or custom grid."""
+        if grid is None:
+            return self._grid_pltr
+        return RegularGridPlotter(grid)
