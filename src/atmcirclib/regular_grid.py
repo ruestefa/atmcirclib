@@ -356,6 +356,7 @@ class RegularGridPlot:
             Union[Sequence[Optional[float]], npt.NDArray[np.float_]]
         ] = None,
         linestyles: Optional[Sequence[Optional[str]]] = None,
+        scale_linewidths: bool = True,
         **kwargs: Any,
     ) -> list[Line2D]:
         """Add outlines of all grids."""
@@ -376,6 +377,8 @@ class RegularGridPlot:
         if isinstance(linewidths, np.ndarray):
             linewidths = cast(list[float], linewidths.tolist())
         linewidths = init_check_len(linewidths, "linewidths")
+        if scale_linewidths:
+            linewidths = [lw * self.scale if lw else lw for lw in linewidths]
         linestyles = init_check_len(linestyles, "linestyles")
 
         handles: list[Line2D] = []
