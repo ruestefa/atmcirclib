@@ -225,7 +225,8 @@ class RegularGridPlotter:
     def add_topo_colors(
         self,
         ax: GeoAxes,
-        levels: Union[Sequence[float], npt.NDArray[np.float_]],
+        *,
+        levels: Optional[Union[Sequence[float], npt.NDArray[np.float_]]] = None,
         **kwargs: Any,
     ) -> GeoContourSet:
         """Plot model topography on a map plot axes."""
@@ -247,7 +248,8 @@ class RegularGridPlotter:
     def add_topo_contours(
         self,
         ax: GeoAxes,
-        levels: Union[Sequence[float], npt.NDArray[np.float_]],
+        *,
+        levels: Optional[Union[Sequence[float], npt.NDArray[np.float_]]] = None,
         **kwargs: Any,
     ) -> GeoContourSet:
         """Plot model topography on a map plot axes."""
@@ -451,18 +453,18 @@ class RegularGridPlot:
         *,
         levels_col: Optional[Union[Sequence[float], npt.NDArray[np.float_]]] = None,
         levels_con: Optional[Union[Sequence[float], npt.NDArray[np.float_]]] = None,
+        plot_col: bool = True,
+        plot_con: bool = True,
         grid: Optional[RegularGrid] = None,
     ) -> None:
         """Add topography, by default of the main grid."""
         pltr = self._get_pltr(grid)
-        if levels_col is None and levels_con is None:
-            raise ValueError("must pass at least one of levels_col and levels_con")
-        if levels_col is not None:
-            handle = pltr.add_topo_colors(self.ax, levels_col)
+        if plot_col:
+            handle = pltr.add_topo_colors(self.ax, levels=levels_col)
             self._topo_col_handles.append(handle)
-        if levels_con is not None:
+        if plot_con:
             handle = pltr.add_topo_contours(
-                self.ax, levels_con, linewidths=0.8 * self.scale
+                self.ax, levels=levels_con, linewidths=0.8 * self.scale
             )
             self._topo_con_handles.append(handle)
 
