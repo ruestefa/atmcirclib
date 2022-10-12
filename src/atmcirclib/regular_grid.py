@@ -8,6 +8,7 @@ from pathlib import Path
 from typing import Any
 from typing import cast
 from typing import Optional
+from typing import TypeVar
 from typing import Union
 
 # Third-party
@@ -47,9 +48,7 @@ class RegularGrid:
         self.lon1d = lon1d
         self.pole_lat = pole_lat
         self.pole_lon = pole_lon
-        self.topo: npt.NDArray[np.float_] = (
-            np.zeros(self.get_shape(), np.float32) if topo is None else topo
-        )
+        self.topo = topo
         self.ll_lat: float = self.lat1d[0]
         self.ll_lon: float = self.lon1d[0]
         self.ur_lat: float = self.lat1d[-1]
@@ -307,12 +306,17 @@ class RegularGridPlot:
 
     def __init__(
         self,
-        grid: RegularGrid,
+        grid_or_grids: Union[RegularGrid, Sequence[RegularGrid]],
         *,
         scale: float = 1.0,
     ) -> None:
         """Create a new instance."""
-        self.grid = grid
+        if not isinstance(grid_or_grids, Sequence):
+            grid_or_grids = [grid_or_grids]
+        if len(grid_or_grids) < 1:
+            raise ValueError("must pass at least one grid")
+        self.grids: list[RegularGrid] = list(grid_or_grids)
+        self.main_grid: RegularGrid = next(iter(self.grids))
         self.scale = scale
 
         self.fs = FontSizes().scale(self.scale)
@@ -321,12 +325,15 @@ class RegularGridPlot:
         self.fig.set_facecolor("white")
 
         self.ax: Axes = self.fig.add_axes(
-            [0.05, 0.05, 0.9, 0.9], projection=self.grid.get_proj()
+            [0.05, 0.05, 0.9, 0.9], projection=self.main_grid.get_proj()
         )
         self.ax.set_adjustable("box")
-        self.ax.set_extent(self.grid.get_extent(grow=0.03), crs=self.grid.get_proj())
+        self.ax.set_extent(
+            self.main_grid.get_extent(grow=0.03), crs=self.main_grid.get_proj()
+        )
 
-        self._grid_pltr = RegularGridPlotter(self.grid)
+        self._grid_pltrs = [RegularGridPlotter(grid) for grid in self.grids]
+        self._main_grid_pltr = next(iter(self._grid_pltrs))
 
         self._topo_con_handles: list[GeoContourSet] = []
         self._topo_col_handles: list[GeoContourSet] = []
@@ -335,11 +342,47 @@ class RegularGridPlot:
 
     def add_grid_lines(self) -> None:
         """Add grid lines."""
-        self._grid_pltr.add_grid_lines(
+        self._main_grid_pltr.add_grid_lines(
             self.ax,
             linewidth=1.0 * self.scale,
             fontsize=self.fs.m,
         )
+
+    def add_outlines(
+        self,
+        *,
+        labels: Optional[Sequence[Optional[str]]] = None,
+        linewidths: Optional[
+            Union[Sequence[Optional[float]], npt.NDArray[np.float_]]
+        ] = None,
+        linestyles: Optional[Sequence[Optional[str]]] = None,
+        **kwargs: Any,
+    ) -> list[Line2D]:
+        """Add outlines of all grids."""
+        T = TypeVar("T")
+
+        def init_check_len(
+            seq: Optional[Sequence[Optional[T]]], name: str
+        ) -> list[Optional[T]]:
+            """Initialize optional sequence if None or check length otherwise."""
+            n = len(self.grids)
+            if seq is None:
+                return [None] * n
+            if (ni := len(seq)) != n:
+                raise ValueError(f"wrong number of {name}: expected {n}, got {ni}")
+            return list(seq)
+
+        labels = init_check_len(labels, "labels")
+        if isinstance(linewidths, np.ndarray):
+            linewidths = cast(list[float], linewidths.tolist())
+        linewidths = init_check_len(linewidths, "linewidths")
+        linestyles = init_check_len(linestyles, "linestyles")
+
+        handles: list[Line2D] = []
+        for grid, label, lw, ls in zip(self.grids, labels, linewidths, linestyles):
+            kwargs_i = {"linewidth": lw, "linestyle": ls, **kwargs}
+            handles.append(self.add_outline(grid=grid, label=label, **kwargs_i))
+        return handles
 
     def add_outline(
         self,
@@ -348,7 +391,7 @@ class RegularGridPlot:
         label: Optional[str] = None,
         **kwargs: Any,
     ) -> Line2D:
-        """Add grid outline."""
+        """Add grid outline, by default of the main grid."""
         pltr = self._get_pltr(grid)
         handle = pltr.add_outline(self.ax, **kwargs)
         self._outline_handles.append(handle)
@@ -373,6 +416,17 @@ class RegularGridPlot:
             **kwargs,
         )
 
+    def add_topos(
+        self,
+        *,
+        levels_col: Optional[Union[Sequence[float], npt.NDArray[np.float_]]] = None,
+        levels_con: Optional[Union[Sequence[float], npt.NDArray[np.float_]]] = None,
+    ) -> None:
+        """Add topography of all grids."""
+        for grid in self.grids:
+            if grid.topo is not None:
+                self.add_topo(grid=grid, levels_col=levels_col, levels_con=levels_con)
+
     def add_topo(
         self,
         *,
@@ -380,7 +434,7 @@ class RegularGridPlot:
         levels_con: Optional[Union[Sequence[float], npt.NDArray[np.float_]]] = None,
         grid: Optional[RegularGrid] = None,
     ) -> None:
-        """Add topography."""
+        """Add topography, by default of the main grid."""
         pltr = self._get_pltr(grid)
         if levels_col is not None:
             handle = pltr.add_topo_colors(self.ax, levels_col)
@@ -419,5 +473,5 @@ class RegularGridPlot:
     def _get_pltr(self, grid: Optional[RegularGrid]) -> RegularGridPlotter:
         """Get plotter of default or custom grid."""
         if grid is None:
-            return self._grid_pltr
+            return self._main_grid_pltr
         return RegularGridPlotter(grid)
