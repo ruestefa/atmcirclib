@@ -136,6 +136,27 @@ class RegularGrid:
             topo=topo,
         )
 
+    def derive(
+        self,
+        lat1d: Optional[npt.NDArray[np.float_]] = None,
+        lon1d: Optional[npt.NDArray[np.float_]] = None,
+        *,
+        pole_lat: Optional[float] = None,
+        pole_lon: Optional[float] = None,
+        topo: Optional[npt.NDArray[np.float_]] = None,
+        keep_topo: bool = True,
+    ) -> RegularGrid:
+        """Derive a new grid by changing selected parameters."""
+        if topo is None and keep_topo:
+            topo = self.topo
+        return type(self)(
+            lat1d=self.lat1d if lat1d is None else lat1d,
+            lon1d=self.lon1d if lon1d is None else lon1d,
+            pole_lat=self.pole_lat if pole_lat is None else pole_lat,
+            pole_lon=self.pole_lon if pole_lon is None else pole_lon,
+            topo=topo,
+        )
+
     def _check_topo(self) -> None:
         """Check consistency of topo field with grid size."""
         if self.topo is None:
