@@ -455,6 +455,8 @@ class RegularGridPlot:
     ) -> None:
         """Add topography, by default of the main grid."""
         pltr = self._get_pltr(grid)
+        if levels_col is None and levels_con is None:
+            raise ValueError("must pass at least one of levels_col and levels_con")
         if levels_col is not None:
             handle = pltr.add_topo_colors(self.ax, levels_col)
             self._topo_col_handles.append(handle)
