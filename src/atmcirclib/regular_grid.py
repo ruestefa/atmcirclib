@@ -115,12 +115,31 @@ class RegularGrid:
         ).T
         return np.array([lats, lons])
 
+    def shrink(self, *, pts: int = 0, keep_topo: bool = True) -> RegularGrid:
+        """Shrink the grid in all four directions."""
+        if pts < 0:
+            raise ValueError(f"pts must be positive: {pts}")
+        lat1d = self.lat1d[pts:-pts]
+        lon1d = self.lon1d[pts:-pts]
+        topo = self.topo
+        if topo is not None:
+            if not keep_topo:
+                topo = None
+            else:
+                topo = topo[pts:-pts, pts:-pts]
+        return type(self)(
+            lat1d=lat1d,
+            lon1d=lon1d,
+            pole_lat=self.pole_lat,
+            pole_lon=self.pole_lon,
+            topo=topo,
+        )
+
     @classmethod
     def from_cosmo_file(
         cls, path: Path, *, n_bnd: int = 0, read_topo: bool = False
     ) -> RegularGrid:
         """Read grid information and (optionally) grid arrays from file."""
-        print(f"{cls.__name__}.from_cosmo_file({path}, {n_bnd=})")
         kwargs = {}
         idcs = slice(None) if not n_bnd else slice(n_bnd, -n_bnd)
         with nc4.Dataset(path, "r") as fi:
