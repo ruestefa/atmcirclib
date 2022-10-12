@@ -1,6 +1,6 @@
 # Atmcirclib: Changelog
 
-## v0.?.? (2022-??-??)
+## v0.8.0 (2022-10-12)
 
 - Add module `atmcirclib.plot_utils` with functions to manipulate colormaps (moved from `cosmo_natl.crclim_domains`).
 - Add module `atmcirclib.regular_grid` with classes `RegularGrid`, `RegularGridPlotter` and `RegularGridPlot` (originally moved from `cosmo_natl.crclim_domains`)
