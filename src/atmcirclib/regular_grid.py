@@ -359,7 +359,23 @@ class RegularGridPlot:
         scale_linewidths: bool = True,
         **kwargs: Any,
     ) -> list[Line2D]:
-        """Add outlines of all grids."""
+        """Add outlines of all grids.
+
+        Args:
+            labels (optional): Label for each grid; omit individuals with None.
+
+            linewidths (optional): Line width for each grid; omit individual
+                ones with None.
+
+            linestyles (optional): Line style for each grid; omit individual ones
+                with None.
+
+            scale_linewidths (optional): Multiply line widths with
+                ``self.scale``.
+
+            **kwargs: Additional arguments passed on to ``self.add_outline``.
+
+        """
         T = TypeVar("T")
 
         def init_check_len(
