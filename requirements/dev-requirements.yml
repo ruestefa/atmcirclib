@@ -4,7 +4,6 @@ channels:
   - conda-forge
   - defaults
 dependencies:
-  - atmcirc::copier>=6.0
   - anaconda-client>=1.8
   - black>=22.3
   - boa>=0.12
@@ -29,3 +28,5 @@ dependencies:
   - cmake>=3.22
   - ninja>=1.10
   - scikit-build>=0.14
+  - pip:
+    - copier>=7.0
