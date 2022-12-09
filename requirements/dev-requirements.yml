@@ -30,3 +30,4 @@ dependencies:
   - scikit-build>=0.14
   - pip:
     - copier>=7.0
+    - flake8-pyproject>=1.2

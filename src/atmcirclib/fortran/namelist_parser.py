@@ -177,7 +177,7 @@ def check_unique_var_names_across_groups(  # noqa: max-complexity: 11
     # Flatten groups
     grouped_var_names: dict[str, set[str]] = {g: set() for g in set(grouped_vars)}
     group_vars: list[dict[str, Any]]
-    subroup_vars: dict[str, Any]
+    subgroup_vars: dict[str, Any]
     for group, group_vars in grouped_vars.items():
         for subgroup_vars in group_vars:
             for var_name in subgroup_vars:
@@ -223,7 +223,7 @@ def flatten_groups(
         check_unique_var_names_across_groups(grouped_vars)
     vars: dict[str, list[Any]] = {}
     group_vars: list[dict[str, Any]]
-    subroup_vars: dict[str, Any]
+    subgroup_vars: dict[str, Any]
     if not merge_dupe_groups:
         for group, group_vars in grouped_vars.items():
             grouped_vars[group] = [group_vars[-1]]
