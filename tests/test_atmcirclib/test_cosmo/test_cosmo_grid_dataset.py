@@ -5,7 +5,7 @@ from __future__ import annotations
 from typing import cast
 
 # Third-party
-import cartopy.crs as ccrs
+import cartopy.crs as ccrs  # type: ignore [import]
 import numpy as np
 import numpy.typing as npt
 import xarray as xr

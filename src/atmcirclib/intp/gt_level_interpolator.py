@@ -10,8 +10,8 @@ from typing import Optional
 from typing import Union
 
 # Third-party
-import gt4py.gtscript as gts
-import gt4py.storage as gt_store
+import gt4py.gtscript as gts  # type: ignore [import]
+import gt4py.storage as gt_store  # type: ignore [import]
 import numpy as np
 import numpy.typing as npt
 from gt4py.gtscript import BACKWARD

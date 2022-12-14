@@ -5,9 +5,9 @@ from __future__ import annotations
 from typing import Union
 
 # Third-party
-import matplotlib as mpl
+import matplotlib as mpl  # type: ignore [import]
 import numpy as np
-from matplotlib.colors import Colormap
+from matplotlib.colors import Colormap  # type: ignore [import]
 
 
 def trunc_cmap(

@@ -1,6 +1,6 @@
 #!/bin/bash
 # Create run and dev conda environments and export them.
-# By Stefan Ruedisuehli, stefan.ruedisuehli@env.ethz.ch, 2021/2022
+# By Stefan Ruedisuehli, stefan.ruedisuehli@env.ethz.ch, 2021--2022
 
 
 detect_conda()
@@ -36,7 +36,7 @@ Options:
 "
 
 # Eval CLI arguments
-while getopts p:uh flag; do
+while getopts p:c:uh flag; do
     case "${flag}" in
         p) PYTHON_VERSION="${OPTARG}";;
         c) CONDA="${OPTARG}";;

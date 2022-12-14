@@ -10,12 +10,12 @@ from typing import Tuple
 from typing import Union
 
 # Third-party
-import cartopy.crs as ccrs
-import matplotlib as mpl
-import matplotlib.pyplot as plt
-import mpl_toolkits as mplt
-import mpl_toolkits.axes_grid1
-import mpl_toolkits.axes_grid1.inset_locator
+import cartopy.crs as ccrs  # type: ignore [import]
+import matplotlib as mpl  # type: ignore [import]
+import matplotlib.pyplot as plt  # type: ignore [import]
+import mpl_toolkits as mplt  # type: ignore [import]
+import mpl_toolkits.axes_grid1  # type: ignore [import]
+import mpl_toolkits.axes_grid1.inset_locator  # type: ignore [import]
 import numpy as np
 import numpy.typing as npt
 

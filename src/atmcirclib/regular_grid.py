@@ -12,19 +12,19 @@ from typing import TypeVar
 from typing import Union
 
 # Third-party
-import cartopy.crs as ccrs
-import matplotlib as mpl
-import matplotlib.pyplot as plt
-import netCDF4 as nc4
+import cartopy.crs as ccrs  # type: ignore [import]
+import matplotlib as mpl  # type: ignore [import]
+import matplotlib.pyplot as plt  # type: ignore [import]
+import netCDF4 as nc4  # type: ignore [import]
 import numpy as np
 import numpy.typing as npt
-from cartopy.mpl.contour import GeoContourSet
-from cartopy.mpl.geoaxes import GeoAxes
-from matplotlib.axes import Axes
-from matplotlib.colorbar import Colorbar
-from matplotlib.colors import Colormap
-from matplotlib.figure import Figure
-from matplotlib.lines import Line2D
+from cartopy.mpl.contour import GeoContourSet  # type: ignore [import]
+from cartopy.mpl.geoaxes import GeoAxes  # type: ignore [import]
+from matplotlib.axes import Axes  # type: ignore [import]
+from matplotlib.colorbar import Colorbar  # type: ignore [import]
+from matplotlib.colors import Colormap  # type: ignore [import]
+from matplotlib.figure import Figure  # type: ignore [import]
+from matplotlib.lines import Line2D  # type: ignore [import]
 
 # Local
 from .plot_utils import concat_cmaps

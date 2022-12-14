@@ -27,7 +27,7 @@ from typing import Union
 # Third-party
 import numpy as np
 import numpy.typing as npt
-import pandas as pd
+import pandas as pd  # type: ignore [import]
 
 # First-party
 from atmcirclib.typing import PathLike_T

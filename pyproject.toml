@@ -9,6 +9,34 @@ requires = [
 ]
 build-backend = "setuptools.build_meta"
 
+[project]
+name = "atmcirclib"
+version = "0.8.0"
+description = "Python library of the Atmospheric Circulation Group"
+readme = "README.md"
+keywords = [
+    "atmospheric circulation",
+]
+classifiers = [
+    "Development Status :: 2 - Pre-Alpha",
+    "Intended Audience :: Developers",
+    "Natural Language :: English",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.9",
+]
+requires-python = ">=3.9"
+authors = [
+    {name="Stefan Ruedisuehli", email="stefan.ruedisuehli@env.ethz.ch"},
+]
+
+[project.urls]
+source = "https://git.iac.ethz.ch/atmcirc/tools/atmcirclib.git"
+documentation = "https://git.iac.ethz.ch/atmcirc/tools/atmcirclib.git"
+
+[project.scripts]
+# Format: <command> = "<package>.<module>:<function>"
+# atmcirclib = "atmcirclib.cli:main"
+
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 addopts = [
