@@ -6,7 +6,7 @@ from typing import Any
 from typing import Union
 
 # Third-party
-import cartopy.crs as ccrs
+import cartopy.crs as ccrs  # type: ignore [import]
 import numpy as np
 import numpy.typing as npt
 import xarray as xr

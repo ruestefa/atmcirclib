@@ -7,7 +7,7 @@ from typing import cast
 from typing import Optional
 
 # Third-party
-import cartopy.crs as ccrs
+import cartopy.crs as ccrs  # type: ignore [import]
 import numpy as np
 import numpy.typing as npt
 import xarray as xr

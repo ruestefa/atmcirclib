@@ -1,22 +1,65 @@
 #!/bin/bash
-# Install project in editable mode
+# Install project in editable mode, optionally along with linked projects.
+# By Stefan Ruedisuehli, stefan.ruedisuehli@env.ethz.ch, 2022
 
-# Build extension modules
-BUILD_EXT=${BUILD_EXT:-true}
 
-# Also install projects that are linked in links/
+detect_conda()
+{
+    mamba --version 1>/dev/null 2>&1
+    if [[ ${?} -eq 0 ]]; then
+        echo "MAMBA_NO_BANNER=1 mamba"
+        return 0
+    fi
+    conda --version 1>/dev/null 2>&1
+    if [[ ${?} -eq 0 ]]; then
+        echo conda
+        return 0
+    fi
+    echo "error: neither mamba nor conda detected" >&2
+    return 1
+}
+
+
+CONDA=${CONDA:-$(detect_conda)}
+BUILD_EXT=${BUILD_EXT:-false}
+FORCE_ACTIVE=${FORCE_ACTIVE:-false}
 INSTALL_LINKED=${INSTALL_LINKED:-false}
-
-# Build extension modules of linked projects
 BUILD_EXT_LINKED=${BUILD_EXT_LINKED:-false}
 
-# Force installation even if no conda environment is active
-FORCE_ACTIVE=${FORCE_ACTIVE:-true}
+USAGE="Usage: $(basename "${0}") [option[s]]
 
-# Show verbose output
-VERBOSE=${VERBOSE:-true}
+Options:
+ -c CMD     Specify conda command (default: ${CONDA})
+ -e         Build extension modules (default: ${BUILD_EXT})
+ -f         Force installation even if no conda environment is active (default: ${FORCE_ACTIVE})
+ -l         Also install projects that are linked in links/ (default: ${INSTALL_LINKED})
+ -L         Also build extension modules of linked projects (default: ${BUILD_EXT_LINKED})
+ "
 
-if ${FORCE_ACTIVE} && [[ "${CONDA_PREFIX}" == "" ]]; then
+while getopts "c:elLfh" flag; do
+    case "${flag}" in
+        c) CONDA="${OPTARG}";;
+        e) BUILD_EXT=true;;
+        l) INSTALL_LINKED=true;;
+        L) BUILD_EXT_LINKED=true;;
+        f) FORCE_ACTIVE=true;;
+        h|?)
+            echo -e "\n${USAGE}" >&2
+            [[ "${flag}" == "h" ]] && exit 0 || exit 1
+        ;;
+    esac
+done
+
+if ${BUILD_EXT_LINKED} && ! ${BUILD_EXT}; then
+    echo "note: -L implies -e" >&2
+    BUILD_EXT=true
+fi
+if ${BUILD_EXT_LINKED} && ! ${INSTALL_LINKED}; then
+    echo "note: -L implies -l" >&2
+    INSTALL_LINKED=true
+fi
+
+if [[ "${CONDA_PREFIX}" == "" ]] && ! ${FORCE_ACTIVE}; then
     echo "error: no active conda environment found" >&2
     echo "(if you know what you do, you may set FORCE_ACTIVE=false)" >&2
     exit 1
@@ -67,7 +110,7 @@ conda_uninstall_from_path()
     for pkg in "${pkgs[@]}"; do
         rx='^\([a-zA-Z0-9_-]\+\)-\([0-9]\+\.[0-9]\+.*\)'
         local pkg_name="$(echo "${pkg}" | \sed "s/${rx}/\1/")" || return
-        output="$(run conda uninstall --force "${pkg_name}" --yes 2>&1)"
+        output="$(run ${CONDA} uninstall --force "${pkg_name}" --yes 2>&1)"
         if [[ ${?} -ne 0 ]]; then
             if echo "${output}" | \grep -q "PackagesNotFoundError"; then
                 continue
@@ -82,7 +125,7 @@ conda_uninstall_from_path()
 run()
 {
     local cmd=("${@}")
-    ${VERBOSE} && echo "RUN ${cmd[@]^Q}"
+    echo "RUN ${cmd[@]^Q}"
     eval "${cmd[@]^Q}" || return
 }
 

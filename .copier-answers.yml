@@ -1,5 +1,5 @@
 # Changes here will be overwritten by Copier; NEVER EDIT MANUALLY
-_commit: bb311b8
+_commit: 3987d3e
 _src_path: git@git.iac.ethz.ch:atmcirc/templates/python-project-f2py.git
 author_email: stefan.ruedisuehli@env.ethz.ch
 author_email_domain: env.ethz.ch

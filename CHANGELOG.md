@@ -1,5 +1,9 @@
 # Atmcirclib: Changelog
 
+## v0.X.X (2022-XX-XX)
+
+- In `atmcirclib.regular_grid.RegularGridPlot`, implement optional rasterization of topography
+
 ## v0.8.0 (2022-10-12)
 
 - Add module `atmcirclib.plot_utils` with functions to manipulate colormaps (moved from `cosmo_natl.crclim_domains`).

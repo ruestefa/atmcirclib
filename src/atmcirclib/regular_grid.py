@@ -12,19 +12,19 @@ from typing import TypeVar
 from typing import Union
 
 # Third-party
-import cartopy.crs as ccrs
-import matplotlib as mpl
-import matplotlib.pyplot as plt
-import netCDF4 as nc4
+import cartopy.crs as ccrs  # type: ignore [import]
+import matplotlib as mpl  # type: ignore [import]
+import matplotlib.pyplot as plt  # type: ignore [import]
+import netCDF4 as nc4  # type: ignore [import]
 import numpy as np
 import numpy.typing as npt
-from cartopy.mpl.contour import GeoContourSet
-from cartopy.mpl.geoaxes import GeoAxes
-from matplotlib.axes import Axes
-from matplotlib.colorbar import Colorbar
-from matplotlib.colors import Colormap
-from matplotlib.figure import Figure
-from matplotlib.lines import Line2D
+from cartopy.mpl.contour import GeoContourSet  # type: ignore [import]
+from cartopy.mpl.geoaxes import GeoAxes  # type: ignore [import]
+from matplotlib.axes import Axes  # type: ignore [import]
+from matplotlib.colorbar import Colorbar  # type: ignore [import]
+from matplotlib.colors import Colormap  # type: ignore [import]
+from matplotlib.figure import Figure  # type: ignore [import]
+from matplotlib.lines import Line2D  # type: ignore [import]
 
 # Local
 from .plot_utils import concat_cmaps
@@ -277,6 +277,7 @@ class RegularGridPlotter:
         ax: GeoAxes,
         *,
         levels: Optional[Union[Sequence[float], npt.NDArray[np.float_]]] = None,
+        rasterize: bool = False,
         **kwargs: Any,
     ) -> GeoContourSet:
         """Plot model topography on a map plot axes."""
@@ -286,7 +287,7 @@ class RegularGridPlotter:
             "extend": "both",
             **kwargs,
         }
-        return ax.contourf(
+        handle = ax.contourf(
             self.grid.lon1d,
             self.grid.lat1d,
             self.grid.topo,
@@ -294,12 +295,17 @@ class RegularGridPlotter:
             levels=levels,
             **kwargs,
         )
+        if rasterize:
+            for item in handle.collections:
+                item.set_rasterized(True)
+        return handle
 
     def add_topo_contours(
         self,
         ax: GeoAxes,
         *,
         levels: Optional[Union[Sequence[float], npt.NDArray[np.float_]]] = None,
+        rasterize: bool = False,
         **kwargs: Any,
     ) -> GeoContourSet:
         """Plot model topography on a map plot axes."""
@@ -310,7 +316,7 @@ class RegularGridPlotter:
             "linewidths": 0.8,
             **kwargs,
         }
-        return ax.contour(
+        handle = ax.contour(
             self.grid.lon1d,
             self.grid.lat1d,
             self.grid.topo,
@@ -318,6 +324,10 @@ class RegularGridPlotter:
             levels=levels,
             **kwargs,
         )
+        if rasterize:
+            for item in handle.collections:
+                item.set_rasterized(True)
+        return handle
 
     def get_zorder(self, name: str) -> int:
         """Get zorder of elements by name."""
@@ -490,16 +500,13 @@ class RegularGridPlot:
             **kwargs,
         )
 
-    def add_topos(
-        self,
-        *,
-        levels_col: Optional[Union[Sequence[float], npt.NDArray[np.float_]]] = None,
-        levels_con: Optional[Union[Sequence[float], npt.NDArray[np.float_]]] = None,
-    ) -> None:
+    def add_topos(self, **kwargs: Any) -> None:
         """Add topography of all grids."""
+        if "grid" in kwargs:
+            raise ValueError("must not pass grid")
         for grid in self.grids:
             if grid.topo is not None:
-                self.add_topo(grid=grid, levels_col=levels_col, levels_con=levels_con)
+                self.add_topo(grid=grid, **kwargs)
 
     def add_topo(
         self,
@@ -509,15 +516,23 @@ class RegularGridPlot:
         plot_col: bool = True,
         plot_con: bool = True,
         grid: Optional[RegularGrid] = None,
+        rasterize: bool = False,
     ) -> None:
         """Add topography, by default of the main grid."""
         pltr = self._get_pltr(grid)
         if plot_col:
-            handle = pltr.add_topo_colors(self.ax, levels=levels_col)
+            handle = pltr.add_topo_colors(
+                self.ax,
+                levels=levels_col,
+                rasterize=rasterize,
+            )
             self._topo_col_handles.append(handle)
         if plot_con:
             handle = pltr.add_topo_contours(
-                self.ax, levels=levels_con, linewidths=0.8 * self.scale
+                self.ax,
+                levels=levels_con,
+                linewidths=0.8 * self.scale,
+                rasterize=rasterize,
             )
             self._topo_con_handles.append(handle)
 
