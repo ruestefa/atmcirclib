@@ -30,8 +30,8 @@ authors = [
 ]
 
 [project.urls]
-source = "https://git.iac.ethz.ch/atmcirc/tools/atmcirclib.git"
-documentation = "https://git.iac.ethz.ch/atmcirc/tools/atmcirclib.git"
+source = "https://git.iac.ethz.ch/atmcirc/tools/atmcirclib"
+documentation = "https://git.iac.ethz.ch/atmcirc/tools/atmcirclib"
 
 [project.scripts]
 # Format: <command> = "<package>.<module>:<function>"
