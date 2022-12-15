@@ -1,15 +1,9 @@
 # Changes here will be overwritten by Copier; NEVER EDIT MANUALLY
-_commit: 3987d3e
+_commit: e81bd2e
 _src_path: git@git.iac.ethz.ch:atmcirc/templates/python-project-f2py.git
 author_email: stefan.ruedisuehli@env.ethz.ch
-author_email_domain: env.ethz.ch
-author_email_name: stefan.ruedisuehli
-author_first_name: Stefan
 author_full_name: Stefan Ruedisuehli
-author_last_name: Ruedisuehli
 git_url: https://git.iac.ethz.ch/atmcirc/tools/atmcirclib.git
-git_url_org: atmcirc/tools
-git_url_provider: https://git.iac.ethz.ch
 git_user: atmcirc
 project_description: Python library of the Atmospheric Circulation Group
 project_keywords: atmospheric circulation
