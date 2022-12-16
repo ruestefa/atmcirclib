@@ -1,4 +1,4 @@
-# Atmcirclib: Changelog
+# AtmCircLib: History
 
 ## v0.X.X (2022-XX-XX)
 
