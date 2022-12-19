@@ -19,8 +19,8 @@ dependencies:
   - pylint>=2.13
   - pytest>=7.1
   - rich>=12.5
-  - tox-conda>=0.9
-  - tox>=3.25
+  # - tox-conda>=0.9
+  # - tox>=3.25
   - toml>=0.10
   - types-setuptools>=57.4
   - types-toml>=0.10
