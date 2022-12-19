@@ -2,7 +2,12 @@
 
 ## v0.X.X (2022-XX-XX)
 
+- TODO
+
+## v0.9.0 (2022-12-19)
+
 - In `atmcirclib.regular_grid.RegularGridPlot`, implement optional rasterization of topography
+- Major copier update: Move toward the MCH Blueprint (not quite finished)
 
 ## v0.8.0 (2022-10-12)
 
