@@ -1,5 +1,5 @@
 # Changes here will be overwritten by Copier; NEVER EDIT MANUALLY
-_commit: 815c9c2
+_commit: dbc963a
 _src_path: git@git.iac.ethz.ch:atmcirc/templates/python-project-f2py.git
 author_email: stefan.ruedisuehli@env.ethz.ch
 author_name: Stefan Ruedisuehli
@@ -11,6 +11,7 @@ project_keywords: atmospheric circulation
 project_name: AtmCircLib
 project_package: atmcirclib
 project_slug: atmcirclib
+project_ssh_url: git+ssh://git@git.iac.ethz.ch/atmcirc/tools/atmcirclib.git
 project_version: 0.4.0
 python_version: '3.9'
 year: '2022'
