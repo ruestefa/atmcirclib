@@ -2,7 +2,6 @@ name: atmcirclib-dev
 channels:
   - atmcirc
   - conda-forge
-  - defaults
 dependencies:
   - _ipython_minor_entry_point=8.7.0
   - _libgcc_mutex=0.1
