@@ -2,7 +2,7 @@
 
 ## v0.X.X (2022-XX-XX)
 
-- TODO
+- Fix editable installs for extension modules (broken in template when stripping down setup.py)
 
 ## v0.9.0 (2022-12-19)
 
