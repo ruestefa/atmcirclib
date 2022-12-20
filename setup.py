@@ -9,8 +9,6 @@ from pathlib import Path
 from setuptools import find_packages
 from skbuild import setup
 
-PROJECT_NAME: str = "atmcirclib"
-
 # Obtain version and root of currently active Python environment for cmake
 curr_python_version: str = f"{sys.version_info.major}.{sys.version_info.minor}"
 curr_python_root: str = str(Path(sys.executable).parent.parent)  # remove `bin/python`
@@ -25,7 +23,7 @@ if sys.argv[1] == "develop":
     # `packages=find_packages("src")` is broken for projects with subpackages,
     # so only list top-level package(s) during development install
     # src: https://github.com/scikit-build/scikit-build/issues/546
-    packages = [PROJECT_NAME]
+    packages = ["atmcirclib"]
 else:
     packages = find_packages("src")
 
