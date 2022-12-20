@@ -2,7 +2,6 @@ name: atmcirclib
 channels:
   - atmcirc
   - conda-forge
-  - defaults
 dependencies:
   - python>=3.9
   - atmcirc::gt4py>=2022.09.29

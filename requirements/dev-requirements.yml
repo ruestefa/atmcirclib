@@ -2,11 +2,10 @@ name: atmcirclib-dev
 channels:
   - atmcirc
   - conda-forge
-  - defaults
 dependencies:
   - anaconda-client>=1.8
   - black>=22.3
-  - boa>=0.12
+  - boa>=0.14
   - conda-build>=3.21
   - flake8>=4.0
   - ipdb>=0.13
