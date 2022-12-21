@@ -3,6 +3,8 @@
 ## v0.X.X (2022-XX-XX)
 
 - Fix editable installs for extension modules (broken in template when stripping down setup.py)
+- Switch copier template to new `atmcirc/python-blueprint-f2py` based on `mch-python-blueprint`
+  - Adds docs and setups for github actions and jenkins
 
 ## v0.9.0 (2022-12-19)
 
