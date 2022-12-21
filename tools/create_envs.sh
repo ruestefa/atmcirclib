@@ -25,9 +25,7 @@ CONDA=""
 DELETE=false
 PYTHON_VERSION=""
 UPDATE=false
-PROJECT_NAME="{{ project_slug }}"
-
-{% raw -%}
+PROJECT_NAME="atmcirclib"
 
 USAGE="Usage: $(basename "${0}") [option[s]]
 
@@ -312,4 +310,3 @@ file_in_same_location()
 
 
 main "${@}"
-{%- endraw %}
