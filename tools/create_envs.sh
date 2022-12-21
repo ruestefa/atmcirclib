@@ -21,30 +21,38 @@ detect_conda()
 
 
 # Default options
+CONDA=""
+DELETE=false
 PYTHON_VERSION=""
 UPDATE=false
-CONDA=""
+PROJECT_NAME="{{ project_slug }}"
 
+{% raw -%}
 
 USAGE="Usage: $(basename "${0}") [option[s]]
 
 Options:
- -p VER     Specify a python version, e.g., 3.9
- -u         Update package versions and export new environment files
  -c CMD     Specify conda command instead of auto-detecting mamba or conda
+ -d         Delete conda envs again in the end; may be useful with -u
+ -h         Show this help message
+ -n NAME    Name of the project used for the environments
+ -p VER     Specify a python version, e.g., 3.11
+ -u         Update package versions and export new environment files
 
 "
 
 # Eval CLI arguments
-while getopts p:c:uh flag; do
+while getopts c:dn:p:hu flag; do
     case "${flag}" in
-        p) PYTHON_VERSION="${OPTARG}";;
         c) CONDA="${OPTARG}";;
-        u) UPDATE=true;;
+        d) DELETE=true;;
+        n) PROJECT_NAME="${OPTARG}";;
+        p) PYTHON_VERSION="${OPTARG}";;
         h)
             echo "${USAGE}"
             exit 0
         ;;
+        u) UPDATE=true;;
         ?)
             echo -e "\n${USAGE}" >&2
             exit 1
@@ -55,19 +63,17 @@ done
 # Determine conda command; if available, prefer mamba over conda
 [[ "${CONDA}" == "" ]] && { CONDA="$(detect_conda)" || exit; }
 cmd=(${CONDA} --version)
-echo "\$ ${cmd[@]^Q}"
-eval "${cmd[@]}" || exit
+echo "\$ ${cmd[*]^Q}"
+eval "${cmd[*]^Q}" || exit
 
 
 main()
 {
-    local repo_name  # local on separate line so it doesn't eat return value
-    repo_name=$(get_repo_name) || return
-    local run_env_name="${repo_name}"
-    local dev_env_name="${repo_name}-dev"
+    local run_env_name="${PROJECT_NAME}"
+    local dev_env_name="${PROJECT_NAME}-dev"
     local env_names=("${run_env_name}" "${dev_env_name}")
 
-    check_active_conda_env "${env_names[@]}" || return
+    check_forbidden_active_conda_env "${env_names[@]}" || return
 
     local possible_run_reqs_files=(
         "requirements/requirements.yml"
@@ -96,7 +102,7 @@ main()
 
     local env_name
     for env_name in "${env_names[@]}"; do
-        remove_existing_env "${env_name}"
+        remove_existing_env "${env_name}" || return
         case "${env_name}" in
             "${run_env_name}")
                 create_new_env "${run_env_name}" "${run_env_file}" "${run_reqs_file}" || return
@@ -105,6 +111,7 @@ main()
                 create_new_env "${dev_env_name}" "${dev_env_file}" "${run_reqs_file}" "${dev_reqs_file}" || return
             ;;
         esac
+        ${DELETE} && { remove_existing_env "${env_name}" || return; }
     done
 }
 
@@ -115,8 +122,8 @@ remove_existing_env()
     if $(eval ${CONDA} info --env | \grep -q "^\<${env_name}\>"); then
         echo "remove conda env '${env_name}'"
         local cmd=(${CONDA} env remove -n "${env_name}")
-        echo "\$ ${cmd[@]^Q}"
-        eval "${cmd[@]}" || return 1
+        echo "\$ ${cmd[*]^Q}"
+        eval "${cmd[*]^Q}" || return 1
     fi
 }
 
@@ -181,8 +188,8 @@ create_empty_env()
         *) local pyflag=" python==${PYTHON_VERSION}";;
     esac
     cmd=(${CONDA} create -n "${env_name}"${pyflag} --yes)
-    echo "\$ ${cmd[@]^Q}"
-    eval "${cmd[@]}" || return 1
+    echo "\$ ${cmd[*]^Q}"
+    eval "${cmd[*]^Q}" || return 1
 }
 
 
@@ -193,8 +200,8 @@ install_reqs_yml()
     local reqs_files_yml=("${@}")
     for reqs_file in "${reqs_files_yml[@]}"; do
         local cmd=(${CONDA} env update -n "${env_name}" --file="${reqs_file}")
-        echo "\$ ${cmd[@]^Q}"
-        eval "${cmd[@]}" || return 1
+        echo "\$ ${cmd[*]^Q}"
+        eval "${cmd[*]^Q}" || return 1
     done
 }
 
@@ -211,8 +218,8 @@ install_reqs_in()
             reqs_file_flags+=(--file="${reqs_file}")
         done
         local cmd=(${CONDA} install -n "${env_name}" "${reqs_file_flags[@]}" --yes)
-        echo "\$ ${cmd[@]^Q}"
-        eval "${cmd[@]}" || return 1
+        echo "\$ ${cmd[*]^Q}"
+        eval "${cmd[*]^Q}" || return 1
     fi
 }
 
@@ -223,8 +230,8 @@ recreate_env()
     local env_file="${2}"
     echo "recreate conda env '${env_name}' from ${env_file}"
     local cmd=(${CONDA} env create -n "${env_name}" python==${PYTHON_VERSION} --file="${env_file}")
-    echo "\$ ${cmd[@]^Q}"
-    eval "${cmd[@]}" || return 1
+    echo "\$ ${cmd[*]^Q}"
+    eval "${cmd[*]^Q}" || return 1
     return 0
 }
 
@@ -234,9 +241,9 @@ export_env()
     local env_name="${1}"
     local env_file="${2}"
     echo "export conda env '${env_name}' to ${env_file}"
-    local cmd=(${CONDA} env export -n "${env_name}" --no-builds ">" "${env_file}")
-    echo "\$ ${cmd[@]^Q}"
-    eval "${cmd[@]}" && return 0
+    local cmd=(${CONDA} env export -n "${env_name}" --no-builds "|" "\grep" -v '^prefix: ' ">" "${env_file}")
+    echo "\$ ${cmd[*]^Q}"
+    eval "${cmd[*]^Q}" && return 0
     echo "error exporting env '${env_name}' to ${env_file}" >&2
     return 1
 }
@@ -255,7 +262,7 @@ check_python_version()
 }
 
 
-check_active_conda_env()
+check_forbidden_active_conda_env()
 {
     local forbidden_names=("${@}")
     local active_name="$(basename "${CONDA_PREFIX}")"
@@ -273,27 +280,6 @@ check_active_conda_env()
         fi
     done
     return 0
-}
-
-
-check_gitpython_installed()
-{
-    python -c 'import git' && return 0
-    echo "Python module 'git' must be installed:" >&2
-    echo " mamba install gitpython --yes" >&2
-    return 1
-}
-
-
-get_repo_name()
-{
-    local cmd="from pathlib import Path"
-    check_gitpython_installed || return
-    cmd+="; from git import Repo"
-    cmd+="; print(Path(Repo('.', search_parent_directories=True).working_tree_dir).name)"
-    python -c "${cmd}" && return 0
-    echo "error getting repo name" >&2
-    return 1
 }
 
 
@@ -326,3 +312,4 @@ file_in_same_location()
 
 
 main "${@}"
+{%- endraw %}

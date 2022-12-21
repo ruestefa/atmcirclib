@@ -147,7 +147,7 @@ Following is a description of the most important files and folders in the projec
     - `setup_env.sh`: Script to create new conda environments; see `setup_env.sh -h` for all available options.
     - `setup_miniconda.sh`: Script to install miniconda.
     - `stage_cleared_jupyter_notebook.sh`: Call `clear_jupyter_notebook.sh`, stage the cleared `*.pynb` file and restore the cleared contents from git stash.
-    - `update_min_reqs_versions.sh`: Set the minimum versions of all packages in `requirements/*requirements.yml` to the minor version in `requirements/*environment.yml`.
+    - `update_min_reqs.sh`: Set the minimum versions of all packages in `requirements/*requirements.yml` to the minor version in `requirements/*environment.yml`.
 - `.gitignore`: Files and folders ignored by `git`.
 - `.pre-commit-config.yaml`: Configuration of pre-commit hooks, which are formatters and checkers run before a successful commit.
 - `AUTHORS.md`: Project authors.
