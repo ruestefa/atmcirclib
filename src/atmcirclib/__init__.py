@@ -1,6 +1,6 @@
 """Top-level package ``atmcirclib``."""
 # Standard library
-import importlib
+import importlib.metadata
 
 # Local
 from . import click
