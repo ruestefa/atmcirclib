@@ -29,17 +29,17 @@ BUILD_EXT_LINKED=${BUILD_EXT_LINKED:-false}
 USAGE="Usage: $(basename "${0}") [option[s]]
 
 Options:
+ -b         Build extension modules (default: ${BUILD_EXT})
  -c CMD     Specify conda command (default: ${CONDA})
- -e         Build extension modules (default: ${BUILD_EXT})
  -f         Force installation even if no conda environment is active (default: ${FORCE_ACTIVE})
  -l         Also install projects that are linked in links/ (default: ${INSTALL_LINKED})
  -L         Also build extension modules of linked projects (default: ${BUILD_EXT_LINKED})
  "
 
-while getopts "c:elLfh" flag; do
+while getopts "bc:lLfh" flag; do
     case "${flag}" in
+        b) BUILD_EXT=true;;
         c) CONDA="${OPTARG}";;
-        e) BUILD_EXT=true;;
         l) INSTALL_LINKED=true;;
         L) BUILD_EXT_LINKED=true;;
         f) FORCE_ACTIVE=true;;

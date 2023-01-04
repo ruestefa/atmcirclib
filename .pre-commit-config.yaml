@@ -19,16 +19,45 @@ repos:
     -   id: debug-statements
     -   id: end-of-file-fixer
     -   id: trailing-whitespace
+-   repo: https://github.com/myint/rstcheck
+    rev: v6.1.0
+    hooks:
+    -   id: rstcheck
+        additional_dependencies:
+        -   sphinx
+        -   sphinx-mdinclude
+        exclude: |
+            (?x)^(
+                docs/authors.rst|
+                docs/contributing.rst|
+                docs/history.rst|
+                docs/modules.rst|
+                docs/readme.rst|
+                docs/usage.rst|
+            )$
+    # note that the excluded files do not contain more than one directive.
+-   repo: https://github.com/codespell-project/codespell
+    rev: v2.2.1
+    hooks:
+    -   id: codespell
 -   repo: https://github.com/psf/black
     rev: 22.12.0
     hooks:
     -   id: black
         files: ^(.*\.py|(src|tests|docs)/(.*/)*.*\.py)$
--   repo: https://github.com/timothycrosley/isort
+-   repo: https://github.com/PyCQA/isort/
     rev: 5.10.1
     hooks:
     -   id: isort
         files: ^(.*\.py|(src|tests|docs)/(.*/)*.*\.py)$
+-   repo: https://github.com/pycqa/flake8
+    rev: 6.0.0
+    hooks:
+    -   id: flake8
+        files: ^(.*\.py|(src|tests|docs)/(.*/)*.*\.py)$
+        additional_dependencies:
+        -   flake8-pyproject
+        -   mccabe
 -   repo: https://github.com/PyCQA/pydocstyle
     rev: 6.1.1
     hooks:
@@ -37,6 +66,7 @@ repos:
           - toml
         files: ^src/(.*/)*.*\.py$
 -   repo: local
+    # Running hooks locally provides them access the dependencies
     hooks:
     -   id: mypy
         name: mypy
@@ -45,6 +75,13 @@ repos:
         types: [python]
         require_serial: true
         verbose: true
+    -   id: pylint
+        name: pylint
+        entry: pylint
+        language: system
+        types: [python]
+        require_serial: true
+        files: ^(.*\.py|(src|tests|docs)/(.*/)*.*\.py)$
 -   repo: local
     hooks:
     -   id: jupyter-nb-clear-output
@@ -56,10 +93,3 @@ repos:
           - jupyter
           - nbconvert
         entry: jupyter nbconvert --ClearOutputPreprocessor.enabled=True --inplace
--   repo: https://github.com/pycqa/flake8
-    rev: 6.0.0
-    hooks:
-    -   id: flake8
-        additional_dependencies:
-          - flake8-pyproject
-          - mccabe

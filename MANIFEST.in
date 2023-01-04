@@ -1,10 +1,9 @@
 include README.md
-include CHANGELOG.md
+include AUTHORS.md
+include CONTRIBUTING.md
+include HISTORY.md
 include LICENSE
 
-recursive-include requirements *.yml
-
-recursive-include src/*/data *
 recursive-include src py.typed
 
 recursive-include tests *

@@ -1,8 +1,11 @@
 # AtmCircLib: History
 
-## v0.X.X (2022-XX-XX)
+## v0.9.1 (2023-01-04)
 
-- TODO
+- Fix editable installs for extension modules (broken in template when stripping down setup.py)
+- Switch copier template to new `atmcirc/python-blueprint-f2py` based on `mch-python-blueprint`
+  - Adds docs and setups for github actions and jenkins
+- Reduce min. copier version to 0.5 (otherwise incompatible with rstcheck)
 
 ## v0.9.0 (2022-12-19)
 

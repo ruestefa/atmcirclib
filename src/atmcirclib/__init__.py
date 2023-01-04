@@ -18,8 +18,6 @@ from . import typer
 from . import typing
 from . import utils
 
-metadata = importlib.metadata.metadata(__package__)
-
 __author__ = "Stefan Ruedisuehli"
 __email__ = "stefan.ruedisuehli@env.ethz.ch"
 __version__ = importlib.metadata.version(__package__)
