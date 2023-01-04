@@ -6,6 +6,7 @@
 - Switch copier template to new `atmcirc/python-blueprint-f2py` based on `mch-python-blueprint`
   - Adds docs and setups for github actions and jenkins
 - Reduce min. copier version to 0.5 (otherwise incompatible with rstcheck)
+- Merge `dev-requirements.yml` into `requirements.yml` and eliminate `requirements/dev*.yml`
 
 ## v0.9.0 (2022-12-19)
 
