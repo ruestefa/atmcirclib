@@ -1,4 +1,4 @@
-name: crclim-pgw
+name: atmcirclib
 channels:
   - atmcirc
   - conda-forge
