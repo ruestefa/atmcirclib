@@ -25,7 +25,7 @@ CONDA=""
 DELETE=false
 PYTHON_VERSION=""
 UPDATE=false
-PROJECT_NAME="crclim-pgw"
+PROJECT_NAME="atmcirclib"
 
 USAGE="Usage: $(basename "${0}") [option[s]]
 

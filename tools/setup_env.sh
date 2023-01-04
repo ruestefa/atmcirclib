@@ -7,7 +7,7 @@
 #
 
 # Default env names
-DEFAULT_ENV_NAME="crclim-pgw"
+DEFAULT_ENV_NAME="atmcirclib"
 
 # Default options
 ENV_NAME="${DEFAULT_ENV_NAME}"
