@@ -1,6 +1,6 @@
 #!/bin/bash
-# Create run and dev conda environments and export them.
-# By Stefan Ruedisuehli, stefan.ruedisuehli@env.ethz.ch, 2021--2022
+# Create conda environment from requirements and export it.
+# By Stefan Ruedisuehli, stefan.ruedisuehli@env.ethz.ch, 2021--2023
 
 
 detect_conda()
@@ -25,17 +25,17 @@ CONDA=""
 DELETE=false
 PYTHON_VERSION=""
 UPDATE=false
-PROJECT_NAME="atmcirclib"
+PROJECT_NAME="crclim-pgw"
 
 USAGE="Usage: $(basename "${0}") [option[s]]
 
 Options:
  -c CMD     Specify conda command instead of auto-detecting mamba or conda
- -d         Delete conda envs again in the end; may be useful with -u
+ -d         Delete conda env again in the end; may be useful with -u
  -h         Show this help message
- -n NAME    Name of the project used for the environments
+ -n NAME    Name of the project used for the environment
  -p VER     Specify a python version, e.g., 3.11
- -u         Update package versions and export new environment files
+ -u         Update package versions and export new environment file
 
 "
 
@@ -67,50 +67,25 @@ eval "${cmd[*]^Q}" || exit
 
 main()
 {
-    local run_env_name="${PROJECT_NAME}"
-    local dev_env_name="${PROJECT_NAME}-dev"
-    local env_names=("${run_env_name}" "${dev_env_name}")
-
-    check_forbidden_active_conda_env "${env_names[@]}" || return
+    local env_name="${PROJECT_NAME}"
+    check_forbidden_active_conda_env "${env_name}" || return
 
     local possible_run_reqs_files=(
         "requirements/requirements.yml"
         "requirements.yml"
-        "requirements/requirements.in"
-        "requirements.in"
     )
-    local possible_dev_reqs_files=(
-        "requirements/dev-requirements.yml"
-        "dev-requirements.yml"
-        "requirements/dev-requirements.in"
-        "dev-requirements.in"
-    )
-    local run_reqs_file dev_reqs_file
-    run_reqs_file="$(select_first_existing_file "${possible_run_reqs_files[@]}")" || return
-    dev_reqs_file="$(select_first_existing_file "${possible_dev_reqs_files[@]}")" || return
-    local run_env_file dev_env_file
-    run_env_file="$(file_in_same_location "${run_reqs_file}" "environment.yml")" || return
-    dev_env_file="$(file_in_same_location "${dev_reqs_file}" "dev-environment.yml")" || return
+    local reqs_file env_file
+    reqs_file="$(select_first_existing_file "${possible_run_reqs_files[@]}")" || return
+    env_file="$(file_in_same_location "${reqs_file}" "environment.yml")" || return
 
     if ${UPDATE}; then
-        echo "update environments from requirements"
+        echo "update environment from requirements"
     else
-        echo "recreate environments"
+        echo "recreate environment"
     fi
 
-    local env_name
-    for env_name in "${env_names[@]}"; do
-        remove_existing_env "${env_name}" || return
-        case "${env_name}" in
-            "${run_env_name}")
-                create_new_env "${run_env_name}" "${run_env_file}" "${run_reqs_file}" || return
-            ;;
-            "${dev_env_name}")
-                create_new_env "${dev_env_name}" "${dev_env_file}" "${run_reqs_file}" "${dev_reqs_file}" || return
-            ;;
-        esac
-        ${DELETE} && { remove_existing_env "${env_name}" || return; }
-    done
+    create_new_env "${env_name}" "${env_file}" "${reqs_file}" || return
+    ${DELETE} && { remove_existing_env "${env_name}" || return; }
 }
 
 
