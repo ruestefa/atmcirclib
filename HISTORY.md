@@ -1,11 +1,15 @@
 # AtmCircLib: History
 
+## v0.9.2 (2023-01-05)
+
+- Lower min. typer version further to 0.4 to accommodate rstcheck (requires <0.5, not <=0.5)
+
 ## v0.9.1 (2023-01-04)
 
 - Fix editable installs for extension modules (broken in template when stripping down setup.py)
 - Switch copier template to new `atmcirc/python-blueprint-f2py` based on `mch-python-blueprint`
   - Adds docs and setups for github actions and jenkins
-- Reduce min. copier version to 0.5 (otherwise incompatible with rstcheck)
+- Reduce min. typer version to 0.5 (otherwise incompatible with rstcheck)
 - Merge `dev-requirements.yml` into `requirements.yml` and eliminate `requirements/dev*.yml`
 
 ## v0.9.0 (2022-12-19)

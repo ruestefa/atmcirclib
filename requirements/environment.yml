@@ -86,7 +86,7 @@ dependencies:
   - keyutils=1.6.1
   - kiwisolver=1.4.4
   - krb5=1.20.1
-  - lazy-object-proxy=1.8.0
+  - lazy-object-proxy=1.9.0
   - lcms2=2.14
   - ld_impl_linux-64=2.39
   - lerc=4.0.0
