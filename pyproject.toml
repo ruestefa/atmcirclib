@@ -11,7 +11,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "atmcirclib"
-version = "0.9.1"
+version = "0.9.2"
 description = "Python library of the Atmospheric Circulation Group"
 readme = "README.md"
 keywords = [

@@ -24,13 +24,25 @@ requirements:
     {% for dep in pyproject["build-system"]["requires"] %}
     - {{ dep.lower() }}
     {% endfor %}
-    {% for dep in requirements["dependencies"] %}
-    - {{ dep.lower() }}
-    {% endfor %}
+    - python>=3.9
+    - atmcirc::gt4py>=2022.09.29
+    - cartopy>=0.20
+    - click>=8.1
+    - netcdf4>=1.5
+    - numpy>=1.22
+    - pandas>=1.4
+    - typer>=0.4
+    - xarray>=2022.3
   run:
-    {% for dep in requirements["dependencies"] %}
-    - {{ dep.lower() }}
-    {% endfor %}
+    - python>=3.9
+    - atmcirc::gt4py>=2022.09.29
+    - cartopy>=0.20
+    - click>=8.1
+    - netcdf4>=1.5
+    - numpy>=1.22
+    - pandas>=1.4
+    - typer>=0.4
+    - xarray>=2022.3
 
 test:
   imports:

@@ -25,7 +25,7 @@ CONDA=""
 DELETE=false
 PYTHON_VERSION=""
 UPDATE=false
-PROJECT_NAME="atmcirclib"
+ENV_NAME="atmcirclib"
 
 USAGE="Usage: $(basename "${0}") [option[s]]
 
@@ -33,7 +33,7 @@ Options:
  -c CMD     Specify conda command instead of auto-detecting mamba or conda
  -d         Delete conda env again in the end; may be useful with -u
  -h         Show this help message
- -n NAME    Name of the project used for the environment
+ -n NAME    Name of the environment
  -p VER     Specify a python version, e.g., 3.11
  -u         Update package versions and export new environment file
 
@@ -44,7 +44,7 @@ while getopts c:dn:p:hu flag; do
     case "${flag}" in
         c) CONDA="${OPTARG}";;
         d) DELETE=true;;
-        n) PROJECT_NAME="${OPTARG}";;
+        n) ENV_NAME="${OPTARG}";;
         p) PYTHON_VERSION="${OPTARG}";;
         h)
             echo "${USAGE}"
@@ -67,8 +67,7 @@ eval "${cmd[*]^Q}" || exit
 
 main()
 {
-    local env_name="${PROJECT_NAME}"
-    check_forbidden_active_conda_env "${env_name}" || return
+    check_forbidden_active_conda_env "${ENV_NAME}" || return
 
     local possible_run_reqs_files=(
         "requirements/requirements.yml"
@@ -84,8 +83,8 @@ main()
         echo "recreate environment"
     fi
 
-    create_new_env "${env_name}" "${env_file}" "${reqs_file}" || return
-    ${DELETE} && { remove_existing_env "${env_name}" || return; }
+    create_new_env "${ENV_NAME}" "${env_file}" "${reqs_file}" || return
+    ${DELETE} && { remove_existing_env "${ENV_NAME}" || return; }
 }
 
 
