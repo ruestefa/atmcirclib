@@ -2,7 +2,7 @@
 {% set package = "atmcirclib" %}
 {% set git_url = "git+ssh://git@git.iac.ethz.ch/atmcirc/tools/atmcirclib.git" %}
 {% set pyproject = load_file_data("../pyproject.toml", from_recipe_dir=True) %}
-{% set requirements = load_file_data("../requirements/requirements.yml", from_recipe_dir=True) %}
+{% set requirements = load_file_data("../requirements.yml", from_recipe_dir=True) %}
 {% set version = pyproject["project"]["version"] %}
 {% set build = "0" %}
 
