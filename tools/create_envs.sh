@@ -70,8 +70,8 @@ main()
     check_forbidden_active_conda_env "${ENV_NAME}" || return
 
     local possible_run_reqs_files=(
-        "requirements/requirements.yml"
         "requirements.yml"
+        "requirements/requirements.yml"
     )
     local reqs_file env_file
     reqs_file="$(select_first_existing_file "${possible_run_reqs_files[@]}")" || return
@@ -121,33 +121,10 @@ create_updated_env()
     shift 2
     local reqs_files=("${@}")
     echo "create up-to-date conda env '${env_name}' from ${reqs_files[@]}"
-    local reqs_files_in=()
-    local reqs_files_yml=()
-    sort_reqs_files "${reqs_files[@]}" || return
     create_empty_env "${env_name}" || return
-    install_reqs_yml "${env_name}" "${reqs_files_yml[@]}" || return
-    install_reqs_in "${env_name}" "${reqs_files_in[@]}" || return
+    install_reqs "${env_name}" "${reqs_files[@]}" || return
     export_env "${env_name}" "${env_file}" || return
     check_python_version || return
-}
-
-
-sort_reqs_files()
-{
-    local reqs_files=("${@}")
-    declare -g -a reqs_files_in
-    declare -g -a reqs_files_yml
-    local reqs_file
-    for reqs_file in "${reqs_files[@]}"; do
-        if [[ "${reqs_file: -3:3}" == ".in" ]]; then
-            reqs_files_in+=("${reqs_file}")
-        elif [[ "${reqs_file: -4:4}" == ".yml" ]]; then
-            reqs_files_yml+=("${reqs_file}")
-        else
-            echo "error: unrecognized requirements file format: ${reqs_file}" >&2
-            return 1
-        fi
-    done
 }
 
 
@@ -165,7 +142,7 @@ create_empty_env()
 }
 
 
-install_reqs_yml()
+install_reqs()
 {
     local env_name="${1}"
     shift 1
@@ -175,24 +152,6 @@ install_reqs_yml()
         echo "\$ ${cmd[*]^Q}"
         eval "${cmd[*]^Q}" || return 1
     done
-}
-
-
-install_reqs_in()
-{
-    local env_name="${1}"
-    shift 1
-    local reqs_files_in=("${@}")
-    if [[ "${#reqs_files_in[@]}" -gt 0 ]]; then
-        local reqs_file_flags=()
-        local reqs_file
-        for reqs_file in "${reqs_files_in[@]}"; do
-            reqs_file_flags+=(--file="${reqs_file}")
-        done
-        local cmd=(${CONDA} install -n "${env_name}" "${reqs_file_flags[@]}" --yes)
-        echo "\$ ${cmd[*]^Q}"
-        eval "${cmd[*]^Q}" || return 1
-    fi
 }
 
 

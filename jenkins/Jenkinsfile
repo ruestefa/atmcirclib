@@ -17,7 +17,7 @@ pipeline {
             steps {
                 sh '''#!/usr/bin/env bash
                 set -e
-                bash setup_miniconda.sh -p ${WORKSPACE}
+                bash tools/setup_miniconda.sh -p ${WORKSPACE}
                 '''
             }
         }
@@ -29,7 +29,7 @@ pipeline {
                 source ${WORKSPACE}/miniconda/etc/profile.d/conda.sh
                 conda init bash
                 conda activate
-                ./setup_env.sh -n atmcirclib -u
+                bash tools/setup_env.sh -n atmcirclib -u
                 conda activate atmcirclib
                 pip install --no-deps .
                 '''
@@ -54,7 +54,7 @@ pipeline {
                 conda init bash
                 conda activate
                 cd ${WORKSPACE}/atmcirclib
-                ./setup_env.sh -n atmcirclib -d -u
+                bash tools/setup_env.sh -n atmcirclib -d -u
                 conda activate dev-atmcirclib
                 pip install --no-deps --editable .
                 '''
@@ -79,7 +79,7 @@ pipeline {
                 conda init bash
                 conda activate
                 cd ${WORKSPACE}/atmcirclib
-                ./setup_env.sh -n pinned-atmcirclib
+                bash tools/setup_env.sh -n pinned-atmcirclib
                 conda activate pinned-atmcirclib
                 pip install --no-deps .
                 '''
@@ -103,7 +103,7 @@ pipeline {
                 conda init bash
                 conda activate
                 cd ${WORKSPACE}/atmcirclib
-                ./setup_env.sh -n pinned-atmcirclib -d
+                bash tools/setup_env.sh -n pinned-atmcirclib -d
                 conda activate pinned-dev-atmcirclib
                 pip install --no-deps --editable .
                 '''
